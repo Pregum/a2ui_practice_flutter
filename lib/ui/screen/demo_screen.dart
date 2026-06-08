@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/a2ui/parser/jsonl_stream_parser.dart';
 import '../../core/a2ui/state/surface_store.dart';
+import '../../core/a2ui/validation/a2ui_validator.dart';
+import '../../core/a2ui/validation/validation_error.dart';
 import '../../core/llm/llm_backend.dart';
 import '../../core/llm/mock_llm.dart';
+import '../../core/llm/prompt/repair_prompt.dart';
 import '../../core/llm/prompt/system_prompt.dart';
 import '../renderer/a2ui_renderer.dart';
 
@@ -20,6 +23,7 @@ const List<_Preset> _presets = [
       '問い合わせ #4821（請求が二重）の対応画面を出して'),
   _Preset('解約の申し出', Icons.exit_to_app_outlined, '解約したいという問い合わせの対応画面を出して'),
   _Preset('ログイン障害', Icons.bug_report_outlined, 'ログインできない不具合の対応画面を出して'),
+  _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して'),
 ];
 
 /// 生成速度プリセット（progressive rendering の演出用）。
@@ -44,8 +48,11 @@ class DemoScreen extends StatefulWidget {
 }
 
 class _DemoScreenState extends State<DemoScreen> {
+  static const int _maxRepairs = 2;
+
   final SurfaceStore _store = SurfaceStore();
   final LlmBackend _llm = MockLlm();
+  final A2uiValidator _validator = const A2uiValidator();
   final TextEditingController _input =
       TextEditingController(text: _presets.first.prompt);
 
@@ -66,35 +73,69 @@ class _DemoScreenState extends State<DemoScreen> {
     super.dispose();
   }
 
+  /// 生成 → 検証 →（失敗なら）自己修正 のループ。
   Future<void> _generate() async {
     if (_generating) return;
     setState(() => _generating = true);
     _store.reset();
-    _store.addLog(LogKind.info, '▶ 生成開始（端末内LLM: ${_llm.name}）');
 
     // 速度プリセットを Mock に反映（実機LLMでは無視される）。
     final llm = _llm;
     if (llm is MockLlm) llm.delay = _speeds[_speedIndex].delay;
 
-    final parser = JsonlStreamParser();
     try {
-      final stream = _llm.generate(
-        system: supportSystemPrompt,
-        user: _input.text,
-      );
-      await for (final chunk in stream) {
-        for (final line in parser.feed(chunk)) {
-          _consume(line);
+      var prompt = _input.text;
+      for (var attempt = 0; attempt <= _maxRepairs; attempt++) {
+        if (attempt == 0) {
+          _store.addLog(LogKind.info, '▶ 生成開始（端末内LLM: ${_llm.name}）');
+        } else {
+          _store.clearSurfaces();
+          _store.addLog(LogKind.info, '↻ 自己修正 試行 $attempt / $_maxRepairs');
         }
+
+        await _stream(prompt);
+
+        // 検証
+        final surface = _store.active;
+        if (surface == null) {
+          _store.addLog(LogKind.error, '✗ NO_SURFACE  サーフェスが生成されませんでした');
+          return;
+        }
+        final List<ValidationError> errors = _validator.validate(surface);
+        if (errors.isEmpty) {
+          _store.addLog(LogKind.info, '✔ 検証OK・生成完了');
+          return;
+        }
+
+        for (final e in errors) {
+          _store.addLog(LogKind.error, '✗ ${e.code}  ${e.path}  ${e.message}');
+        }
+        if (attempt == _maxRepairs) {
+          _store.addLog(LogKind.error, '⚠ 上限到達。自己修正を打ち切りました');
+          return;
+        }
+        // repair プロンプトを次の入力にする
+        prompt = buildRepairPrompt(errors, surface.surfaceId);
+        _store.addLog(LogKind.skip, '→ repair プロンプトを LLM に差し戻し');
       }
-      for (final line in parser.flush()) {
-        _consume(line);
-      }
-      _store.addLog(LogKind.info, '✔ 生成完了');
     } catch (e) {
       _store.addLog(LogKind.error, 'エラー: $e');
     } finally {
       if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  /// 1回ぶんの生成ストリームをパースして適用する。
+  Future<void> _stream(String prompt) async {
+    final parser = JsonlStreamParser();
+    final stream = _llm.generate(system: supportSystemPrompt, user: prompt);
+    await for (final chunk in stream) {
+      for (final line in parser.feed(chunk)) {
+        _consume(line);
+      }
+    }
+    for (final line in parser.flush()) {
+      _consume(line);
     }
   }
 

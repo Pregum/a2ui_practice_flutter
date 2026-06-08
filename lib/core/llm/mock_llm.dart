@@ -44,6 +44,10 @@ class MockLlm implements LlmBackend {
   /// 要望のキーワードでシナリオを選ぶ。
   List<String> _scenarioFor(String user) {
     bool has(List<String> kw) => kw.any(user.contains);
+    // repair プロンプト（検証失敗の差し戻し）を受けたら修正版を返す。
+    if (has(const ['VALIDATION_FAILED', 'スキーマ検証に失敗'])) return _repairedConsole;
+    // 自己修正デモ: わざと壊れた UI を最初に出す。
+    if (has(const ['自己修正', '壊れ'])) return _brokenConsole;
     if (has(const ['解約', 'キャンセル', '退会', '解除'])) return _cancelConsole;
     if (has(const ['不具合', '障害', 'ログインできない', 'エラー', 'バグ', '動かない'])) {
       return _incidentConsole;
@@ -51,6 +55,33 @@ class MockLlm implements LlmBackend {
     return _billingConsole;
   }
 }
+
+/// 自己修正デモ①：わざと壊れた出力。
+/// - "note" がカタログ外の型 "Callout"（UNKNOWN_COMPONENT）
+/// - root が "actions" を参照するが未定義（UNDEFINED_REF）
+const List<String> _brokenConsole = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"reset_console","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"reset_console","components":['
+      '{"id":"root","component":"Column","children":["header","note","actions"]},'
+      '{"id":"header","component":"InquiryHeader","customer":"鈴木 次郎","subject":"パスワードをリセットしたい","status":"open","priority":"normal"},'
+      '{"id":"note","component":"Callout","text":"パスワードリセット手順を案内"}'
+      ']}}',
+];
+
+/// 自己修正デモ②：repair プロンプトを受けて修正した正しい出力。
+/// - "note" を Text に修正 / "actions" を QuickActions として定義
+const List<String> _repairedConsole = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"reset_console","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"reset_console","components":['
+      '{"id":"root","component":"Column","children":["header","note","actions"]},'
+      '{"id":"header","component":"InquiryHeader","customer":"鈴木 次郎","subject":"パスワードをリセットしたい","status":"open","priority":"normal"},'
+      '{"id":"note","component":"Text","text":"パスワードリセット手順を案内してください。","variant":"caption"},'
+      '{"id":"actions","component":"QuickActions","actions":['
+      '{"label":"リセットURLを送信","name":"sendResetLink"},'
+      '{"label":"本人確認を依頼","name":"verifyIdentity"},'
+      '{"label":"解決済みにする","name":"resolve"}]}'
+      ']}}',
+];
 
 /// シナリオ①：請求の二重課金（status=open / priority=high）
 const List<String> _billingConsole = [

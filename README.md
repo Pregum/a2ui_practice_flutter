@@ -101,8 +101,8 @@ basic カタログを「自社デザインシステム」に差し替えた例�
 - [x] A2UI コア（メッセージ / 隣接リスト / streaming パーサ / JSON Pointer）
 - [x] レンダラー + `support` 独自カタログ + `MockLlm`（macOS で動作）
 - [x] プリセット要望 / 複数シナリオ / progressive 演出 / オフライン演出
+- [x] Validator + 自己修正ループ（不正JSON → repair プロンプト → 再生成、上限付き）
 - [ ] **実機オンデバイス推論**（`flutter_gemma`・Android・機内モード実演）
-- [ ] Validator + 自己修正ループ（不正JSON → repair プロンプト）
 - [ ] 制約付きデコード（GBNF）で小型モデルの JSON 破綻を抑制
 
 ## ライセンス / 補足

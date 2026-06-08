@@ -37,6 +37,13 @@ class SurfaceStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ログは残したままサーフェスだけ破棄する（自己修正の再試行用）。
+  void clearSurfaces() {
+    _surfaces.clear();
+    _activeSurfaceId = null;
+    notifyListeners();
+  }
+
   /// A2UI メッセージを1件適用する。
   void apply(A2uiMessage msg) {
     switch (msg) {
