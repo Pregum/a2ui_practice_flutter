@@ -1,0 +1,96 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="A2UI-architecture" id="a2ui-arch">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- App container -->
+        <mxCell id="app" value="Flutter App（Android / macOS）" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=14;fillColor=#0d1117;strokeColor=#30363d;fontColor=#8b949e;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="620" height="980" as="geometry" />
+        </mxCell>
+
+        <!-- Demo Screen -->
+        <mxCell id="demo" value="Demo Screen&#10;（要望入力 / ログ可視化）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#58a6ff;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="90" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- LLM Layer group -->
+        <mxCell id="llm" value="LLM Layer（差替え可能）" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fillColor=#161b22;strokeColor=#d29922;fontColor=#d29922;fontSize=13;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="160" y="210" width="380" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="mock" value="MockLlm&#10;（例を再生・デスクトップ）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="180" y="250" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gemma" value="FlutterGemmaLlm&#10;（実機・GBNF）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#8b949e;fontColor=#e6edf3;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="250" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Parser -->
+        <mxCell id="parser" value="A2UI Parser&#10;（streaming JSONL）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#58a6ff;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="390" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Validator -->
+        <mxCell id="validator" value="Validator&#10;（root / 参照 / 型 検査）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#58a6ff;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="510" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Surface Store -->
+        <mxCell id="store" value="Surface Store&#10;（components / dataModel）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="630" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Renderer -->
+        <mxCell id="renderer" value="A2UI Renderer&#10;component → Flutter Widget（progressive）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="180" y="750" width="340" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Action Dispatcher -->
+        <mxCell id="dispatch" value="Action Dispatcher&#10;（event → 次surface）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#f778ba;fontColor=#e6edf3;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="200" y="880" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="e1" value="prompt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8b949e;fontColor=#8b949e;endArrow=block;" edge="1" parent="1" source="demo" target="llm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="JSONL stream" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8b949e;fontColor=#8b949e;endArrow=block;" edge="1" parent="1" source="llm" target="parser">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="messages" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8b949e;fontColor=#8b949e;endArrow=block;" edge="1" parent="1" source="parser" target="validator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="OK" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8b949e;fontColor=#8b949e;endArrow=block;" edge="1" parent="1" source="validator" target="store">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="notify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#8b949e;fontColor=#8b949e;endArrow=block;" edge="1" parent="1" source="store" target="renderer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="event" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#f778ba;fontColor=#f778ba;endArrow=block;" edge="1" parent="1" source="renderer" target="dispatch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Feedback: validator -> llm (repair) on the left -->
+        <mxCell id="e7" value="error → repair prompt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#f85149;fontColor=#f85149;dashed=1;endArrow=block;exitX=0;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="validator" target="llm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="110" y="540" />
+              <mxPoint x="110" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Feedback: dispatch -> llm (next surface) on the right -->
+        <mxCell id="e8" value="次の要望 → 新surface" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#f778ba;fontColor=#f778ba;dashed=1;endArrow=block;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="dispatch" target="llm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="910" />
+              <mxPoint x="600" y="270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

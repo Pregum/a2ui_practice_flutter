@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 690" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif">
+  <defs>
+    <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#8b949e"/></marker>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#f85149"/></marker>
+    <marker id="ap" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#f778ba"/></marker>
+  </defs>
+
+  <text x="20" y="18" fill="#8b949e" font-size="12" font-weight="700" dominant-baseline="middle">Flutter App（Android / macOS）</text>
+
+  <!-- Demo Screen -->
+  <rect x="220" y="36" width="300" height="50" rx="9" fill="#161b22" stroke="#58a6ff"/>
+  <text x="370" y="56" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">Demo Screen</text>
+  <text x="370" y="74" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">要望入力 / ログ可視化</text>
+
+  <!-- LLM Layer -->
+  <rect x="180" y="118" width="380" height="104" rx="9" fill="#161b22" stroke="#d29922"/>
+  <text x="370" y="135" text-anchor="middle" fill="#d29922" font-size="13" font-weight="700" dominant-baseline="middle">LLM Layer（差替え可能）</text>
+  <rect x="205" y="152" width="160" height="52" rx="9" fill="#0d1117" stroke="#3fb950"/>
+  <text x="285" y="171" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="600" dominant-baseline="middle">MockLlm</text>
+  <text x="285" y="188" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">例を再生・PC</text>
+  <rect x="375" y="152" width="160" height="52" rx="9" fill="#0d1117" stroke="#8b949e"/>
+  <text x="455" y="171" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="600" dominant-baseline="middle">FlutterGemmaLlm</text>
+  <text x="455" y="188" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">実機・GBNF</text>
+
+  <!-- Parser -->
+  <rect x="220" y="252" width="300" height="48" rx="9" fill="#161b22" stroke="#58a6ff"/>
+  <text x="370" y="270" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">A2UI Parser</text>
+  <text x="370" y="287" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">streaming JSONL（部分行を確定）</text>
+
+  <!-- Validator -->
+  <rect x="220" y="332" width="300" height="48" rx="9" fill="#161b22" stroke="#58a6ff"/>
+  <text x="370" y="350" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">Validator</text>
+  <text x="370" y="367" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">root / 参照 / 型 検査</text>
+
+  <!-- Surface Store -->
+  <rect x="220" y="412" width="300" height="48" rx="9" fill="#161b22" stroke="#3fb950"/>
+  <text x="370" y="430" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">Surface Store</text>
+  <text x="370" y="447" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">components / dataModel</text>
+
+  <!-- Renderer -->
+  <rect x="200" y="492" width="340" height="48" rx="9" fill="#161b22" stroke="#3fb950"/>
+  <text x="370" y="510" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">A2UI Renderer</text>
+  <text x="370" y="527" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">component → Flutter Widget（progressive）</text>
+
+  <!-- Action Dispatcher -->
+  <rect x="220" y="572" width="300" height="48" rx="9" fill="#161b22" stroke="#f778ba"/>
+  <text x="370" y="590" text-anchor="middle" fill="#e6edf3" font-size="14" font-weight="600" dominant-baseline="middle">Action Dispatcher</text>
+  <text x="370" y="607" text-anchor="middle" fill="#8b949e" font-size="11.5" dominant-baseline="middle">event → 次surface</text>
+
+  <!-- Spine arrows -->
+  <line x1="370" y1="86" x2="370" y2="116" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="101" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">prompt</text>
+  <line x1="370" y1="222" x2="370" y2="250" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="236" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">JSONL stream</text>
+  <line x1="370" y1="300" x2="370" y2="330" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="315" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">messages</text>
+  <line x1="370" y1="380" x2="370" y2="410" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="395" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">OK</text>
+  <line x1="370" y1="460" x2="370" y2="490" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="475" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">notify</text>
+  <line x1="370" y1="540" x2="370" y2="570" stroke="#8b949e" stroke-width="1.5" marker-end="url(#ag)"/>
+  <text x="378" y="555" fill="#8b949e" font-size="11.5" font-family="ui-monospace,Menlo,monospace" dominant-baseline="middle">event</text>
+
+  <!-- Feedback: repair loop (validator -> llm), left, dashed red -->
+  <path d="M220,356 H110 V170 H178" fill="none" stroke="#f85149" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+  <text x="115" y="262" fill="#f85149" font-size="11.5" font-family="ui-monospace,Menlo,monospace" transform="rotate(-90 115 262)" text-anchor="middle" dominant-baseline="middle">error → repair prompt</text>
+
+  <!-- Feedback: next surface (dispatch -> llm), right, dashed pink -->
+  <path d="M520,596 H645 V170 H562" fill="none" stroke="#f778ba" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ap)"/>
+  <text x="640" y="380" fill="#f778ba" font-size="11.5" font-family="ui-monospace,Menlo,monospace" transform="rotate(-90 640 380)" text-anchor="middle" dominant-baseline="middle">次の要望 → 新surface</text>
+</svg>
