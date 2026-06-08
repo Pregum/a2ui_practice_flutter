@@ -30,7 +30,8 @@ class A2uiRenderer extends StatelessWidget {
       return const _Hint('root 待ち… 画面を生成中');
     }
     final binding = DataBinding(surface.dataModel);
-    return SingleChildScrollView(
+    // スクロールは呼び出し側に委ねる（端末枠側で SingleChildScrollView する）。
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: _build(context, 'root', binding, const {}, 0),
     );
@@ -50,15 +51,19 @@ class A2uiRenderer extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: _gaps(
-              c.childIds.map((cid) => _build(ctx, cid, b, v, depth + 1)),
+              c.childIds.map((cid) => _Appear(
+                  key: ValueKey('ap_$cid'),
+                  child: _build(ctx, cid, b, v, depth + 1))),
               vertical: true),
         );
       case 'Row':
         return Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: _gaps(
-              c.childIds.map(
-                  (cid) => Flexible(child: _build(ctx, cid, b, v, depth + 1))),
+              c.childIds.map((cid) => Flexible(
+                  child: _Appear(
+                      key: ValueKey('ap_$cid'),
+                      child: _build(ctx, cid, b, v, depth + 1)))),
               vertical: false),
         );
       case 'Card':
@@ -516,25 +521,65 @@ class _BoundTextFieldState extends State<_BoundTextField> {
   }
 }
 
-/// 描画前のヒント表示。
+/// 初回マウント時に一度だけフェード+スライドで現れる。progressive rendering で
+/// 「新しく届いたコンポーネントだけ」がアニメーションする（既存は再生しない）。
+class _Appear extends StatefulWidget {
+  const _Appear({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<_Appear> createState() => _AppearState();
+}
+
+class _AppearState extends State<_Appear>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  )..forward();
+  late final CurvedAnimation _curve =
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _curve,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(_curve),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// 描画前のヒント表示（root 到着までの一瞬）。
 class _Hint extends StatelessWidget {
   const _Hint(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-              const SizedBox(height: 12),
-              Text(text, style: TextStyle(color: Colors.grey.shade600)),
-            ],
-          ),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 12),
+            Flexible(
+                child: Text(text, style: TextStyle(color: Colors.grey.shade600))),
+          ],
         ),
       );
 }

@@ -7,6 +7,34 @@ import '../../core/llm/mock_llm.dart';
 import '../../core/llm/prompt/system_prompt.dart';
 import '../renderer/a2ui_renderer.dart';
 
+/// プリセットの要望（チップで素早く切替）。
+class _Preset {
+  const _Preset(this.label, this.icon, this.prompt);
+  final String label;
+  final IconData icon;
+  final String prompt;
+}
+
+const List<_Preset> _presets = [
+  _Preset('請求の問い合わせ', Icons.receipt_long_outlined,
+      '問い合わせ #4821（請求が二重）の対応画面を出して'),
+  _Preset('解約の申し出', Icons.exit_to_app_outlined, '解約したいという問い合わせの対応画面を出して'),
+  _Preset('ログイン障害', Icons.bug_report_outlined, 'ログインできない不具合の対応画面を出して'),
+];
+
+/// 生成速度プリセット（progressive rendering の演出用）。
+class _Speed {
+  const _Speed(this.label, this.delay);
+  final String label;
+  final Duration delay;
+}
+
+const List<_Speed> _speeds = [
+  _Speed('遅い端末', Duration(milliseconds: 55)),
+  _Speed('標準', Duration(milliseconds: 22)),
+  _Speed('高速', Duration(milliseconds: 6)),
+];
+
 /// デモ画面。要望入力 → LLM 生成 → JSONL パース → 描画 → ログ可視化。
 class DemoScreen extends StatefulWidget {
   const DemoScreen({super.key});
@@ -19,10 +47,11 @@ class _DemoScreenState extends State<DemoScreen> {
   final SurfaceStore _store = SurfaceStore();
   final LlmBackend _llm = MockLlm();
   final TextEditingController _input =
-      TextEditingController(text: '問い合わせ #4821 の対応画面を出して');
+      TextEditingController(text: _presets.first.prompt);
 
   bool _generating = false;
   bool _showLog = true;
+  int _speedIndex = 1; // 標準
 
   @override
   void initState() {
@@ -41,7 +70,11 @@ class _DemoScreenState extends State<DemoScreen> {
     if (_generating) return;
     setState(() => _generating = true);
     _store.reset();
-    _store.addLog(LogKind.info, '▶ 生成開始（${_llm.name}）');
+    _store.addLog(LogKind.info, '▶ 生成開始（端末内LLM: ${_llm.name}）');
+
+    // 速度プリセットを Mock に反映（実機LLMでは無視される）。
+    final llm = _llm;
+    if (llm is MockLlm) llm.delay = _speeds[_speedIndex].delay;
 
     final parser = JsonlStreamParser();
     try {
@@ -80,6 +113,7 @@ class _DemoScreenState extends State<DemoScreen> {
       ..showSnackBar(SnackBar(
         content: Text('イベント発火: $name  $ctx'),
         behavior: SnackBarBehavior.floating,
+        width: 520,
       ));
   }
 
@@ -87,18 +121,26 @@ class _DemoScreenState extends State<DemoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('オンデバイスLLM × A2UI  —  サポートコンソール'),
+        titleSpacing: 16,
+        title: Row(
+          children: [
+            const Text('A2UI サポートコンソール'),
+            const SizedBox(width: 14),
+            _offlineBadge(),
+          ],
+        ),
         actions: [
           IconButton(
-            tooltip: 'ログ表示',
+            tooltip: 'ストリームログ',
             icon: Icon(_showLog ? Icons.terminal : Icons.terminal_outlined),
             onPressed: () => setState(() => _showLog = !_showLog),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
-          _inputBar(),
+          _controlBar(),
           const Divider(height: 1),
           Expanded(
             child: Row(
@@ -117,75 +159,209 @@ class _DemoScreenState extends State<DemoScreen> {
     );
   }
 
-  Widget _inputBar() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _input,
-              onSubmitted: (_) => _generate(),
-              decoration: const InputDecoration(
-                labelText: '要望（自然言語）',
-                border: OutlineInputBorder(),
-                isDense: true,
-                prefixIcon: Icon(Icons.chat_outlined),
-              ),
-            ),
+  // ===== オフライン / 端末内バッジ =====
+  Widget _offlineBadge() {
+    Widget pill(IconData icon, String text, Color c) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: c.withValues(alpha: 0.5)),
           ),
-          const SizedBox(width: 10),
-          FilledButton.icon(
-            onPressed: _generating ? null : _generate,
-            icon: _generating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.auto_awesome),
-            label: Text(_generating ? '生成中…' : 'UI を生成'),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 13, color: c),
+            const SizedBox(width: 4),
+            Text(text,
+                style: TextStyle(
+                    fontSize: 11.5, color: c, fontWeight: FontWeight.w600)),
+          ]),
+        );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      pill(Icons.flight, 'オフライン', Colors.green),
+      const SizedBox(width: 6),
+      pill(Icons.smartphone, '端末内LLM: ${_llm.name}', Colors.blue),
+    ]);
+  }
+
+  // ===== 上部コントロール（入力 / プリセット / 速度）=====
+  Widget _controlBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _input,
+                  onSubmitted: (_) => _generate(),
+                  decoration: const InputDecoration(
+                    labelText: '要望（自然言語）',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    prefixIcon: Icon(Icons.chat_outlined),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                onPressed: _generating ? null : _generate,
+                icon: _generating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.auto_awesome),
+                label: Text(_generating ? '生成中…' : 'UI を生成'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    for (final p in _presets)
+                      ActionChip(
+                        avatar: Icon(p.icon, size: 16),
+                        label: Text(p.label),
+                        onPressed: _generating
+                            ? null
+                            : () {
+                                _input.text = p.prompt;
+                                _generate();
+                              },
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _speedControl(),
+            ],
           ),
         ],
       ),
     );
   }
 
+  Widget _speedControl() {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.speed, size: 16, color: Colors.grey.shade600),
+      const SizedBox(width: 6),
+      Text('生成速度', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+      const SizedBox(width: 8),
+      SegmentedButton<int>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        segments: [
+          for (var i = 0; i < _speeds.length; i++)
+            ButtonSegment(value: i, label: Text(_speeds[i].label)),
+        ],
+        selected: {_speedIndex},
+        onSelectionChanged: _generating
+            ? null
+            : (s) => setState(() => _speedIndex = s.first),
+      ),
+    ]);
+  }
+
+  // ===== 生成された画面（端末枠で囲う）=====
   Widget _surfaceArea() {
-    return ListenableBuilder(
-      listenable: _store,
-      builder: (context, _) {
-        final surface = _store.active;
-        if (surface == null) {
+    return Container(
+      color: const Color(0xFFeef1f5),
+      child: ListenableBuilder(
+        listenable: _store,
+        builder: (context, _) {
+          final surface = _store.active;
+          if (surface == null) return _emptyState();
           return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.smart_toy_outlined,
-                    size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 12),
-                Text('「UI を生成」を押すと、端末内LLMが\nA2UI を吐いて画面が組み上がります',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey.shade600)),
-              ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: _deviceFrame(
+                child: A2uiRenderer(
+                  surface: surface,
+                  store: _store,
+                  onEvent: _onEvent,
+                ),
+              ),
             ),
           );
-        }
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: A2uiRenderer(
-              surface: surface,
-              store: _store,
-              onEvent: _onEvent,
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 
+  Widget _deviceFrame({required Widget child}) {
+    return Container(
+      width: 560,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFd5dae2), width: 8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // ステータスバー風のヘッダ
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: const Color(0xFFf3f5f8),
+            child: Row(
+              children: [
+                Icon(Icons.smartphone, size: 14, color: Colors.grey.shade600),
+                const SizedBox(width: 6),
+                Text('端末画面 ・ A2UI レンダリング',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                const Spacer(),
+                Icon(Icons.flight, size: 13, color: Colors.green.shade600),
+                const SizedBox(width: 4),
+                Text('オフライン',
+                    style: TextStyle(
+                        fontSize: 11.5, color: Colors.green.shade700)),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 14),
+          Text('プリセットを選ぶか「UI を生成」を押すと、\n'
+              '端末内LLMが A2UI を吐いて画面が組み上がります',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, height: 1.5)),
+        ],
+      ),
+    );
+  }
+
+  // ===== ストリームログ =====
   Widget _logPanel() {
     return Container(
       color: const Color(0xFF0d1117),

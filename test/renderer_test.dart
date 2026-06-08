@@ -46,7 +46,9 @@ void main() {
       ),
     ));
     // TextField のカーソル点滅で pumpAndSettle が settle しないため pump を使う。
+    // _Appear のフェードイン（有限）を進めてから検証/タップする。
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     // 専用カタログのコンポーネントが描画されている
     expect(find.text('請求額が二重になっている'), findsOneWidget); // InquiryHeader.subject

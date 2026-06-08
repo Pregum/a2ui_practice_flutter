@@ -1,5 +1,5 @@
 name: a2ui_support_demo
-description: "A new Flutter project."
+description: "On-Device LLM × A2UI — 端末内LLMが A2UI JSON を生成し実 Flutter ウィジェットに描画するデモ"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

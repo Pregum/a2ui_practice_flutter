@@ -64,7 +64,7 @@ void main() {
       }
 
       final surface = store.active!;
-      expect(surface.surfaceId, 'support_console');
+      expect(surface.surfaceId, 'billing_console'); // '対応画面'→請求シナリオ(既定)
       expect(surface.hasRoot, isTrue);
       // root の children が最終的な7要素に更新されている
       expect(surface.components['root']!.childIds, contains('reply'));
@@ -75,6 +75,28 @@ void main() {
       for (final id in surface.components['root']!.childIds) {
         expect(surface.components.containsKey(id), isTrue, reason: '未定義: $id');
       }
+    });
+
+    test('キーワードでシナリオが切り替わる', () async {
+      Future<String> surfaceIdFor(String prompt) async {
+        final store = SurfaceStore();
+        final llm = MockLlm(chunkSize: 64, delay: Duration.zero);
+        final parser = JsonlStreamParser();
+        await for (final chunk
+            in llm.generate(system: supportSystemPrompt, user: prompt)) {
+          for (final line in parser.feed(chunk)) {
+            if (line.ok) store.apply(line.message!);
+          }
+        }
+        for (final line in parser.flush()) {
+          if (line.ok) store.apply(line.message!);
+        }
+        return store.active!.surfaceId;
+      }
+
+      expect(await surfaceIdFor('解約したい'), 'cancel_console');
+      expect(await surfaceIdFor('ログインできない不具合'), 'incident_console');
+      expect(await surfaceIdFor('請求について'), 'billing_console');
     });
   });
 }

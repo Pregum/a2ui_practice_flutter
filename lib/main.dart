@@ -18,6 +18,23 @@ class A2uiSupportDemoApp extends StatelessWidget {
         colorSchemeSeed: const Color(0xFF3b6ef5),
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFf5f6f8),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFFe3e7ee)),
+          ),
+          clipBehavior: Clip.antiAlias,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0.5,
+        ),
+        chipTheme: const ChipThemeData(
+          side: BorderSide(color: Color(0xFFd5dae2)),
+        ),
       ),
       home: const DemoScreen(),
     );

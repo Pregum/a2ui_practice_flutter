@@ -2,7 +2,7 @@
 ///
 /// basic カタログを自社デザインシステム（support）に差し替えた例。
 /// catalogId を独自URIにし、カタログ部を専用コンポーネントへ置き換えている。
-const String supportCatalogId = 'https://xtone.example/catalog/support';
+const String supportCatalogId = 'https://example.com/catalog/support';
 
 const String supportSystemPrompt = '''
 あなたはカスタマーサポート管理画面を生成するエージェントです。
