@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/a2ui/parser/jsonl_stream_parser.dart';
 import '../../core/a2ui/state/surface_store.dart';
 import '../../core/a2ui/validation/a2ui_validator.dart';
 import '../../core/a2ui/validation/validation_error.dart';
+import '../../core/llm/flutter_gemma_llm.dart';
+import '../../core/llm/gemma_config.dart';
 import '../../core/llm/llm_backend.dart';
 import '../../core/llm/mock_llm.dart';
 import '../../core/llm/prompt/repair_prompt.dart';
@@ -51,10 +55,14 @@ class _DemoScreenState extends State<DemoScreen> {
   static const int _maxRepairs = 2;
 
   final SurfaceStore _store = SurfaceStore();
-  final LlmBackend _llm = MockLlm();
+  final MockLlm _mock = MockLlm();
   final A2uiValidator _validator = const A2uiValidator();
   final TextEditingController _input =
       TextEditingController(text: _presets.first.prompt);
+
+  /// 現在のバックエンド（Mock ↔ 実機 Gemma を切替）。
+  late LlmBackend _llm = _mock;
+  FlutterGemmaLlm? _gemma;
 
   bool _generating = false;
   bool _showLog = true;
@@ -63,7 +71,7 @@ class _DemoScreenState extends State<DemoScreen> {
   @override
   void initState() {
     super.initState();
-    _llm.warmup();
+    _mock.warmup();
   }
 
   @override
@@ -157,6 +165,69 @@ class _DemoScreenState extends State<DemoScreen> {
       ));
   }
 
+  // ===== LLM バックエンド切替（Mock ↔ 実機 Gemma）=====
+  void _useMock() => setState(() => _llm = _mock);
+
+  Future<void> _useGemma() async {
+    if (!GemmaConfig.isConfigured) {
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(const SnackBar(
+          content: Text(
+              'HUGGINGFACE_TOKEN が未設定です。--dart-define=HUGGINGFACE_TOKEN=hf_xxx を付けて起動してください'),
+        ));
+      return;
+    }
+    final gemma = _gemma ??= FlutterGemmaLlm(
+      modelUrl: GemmaConfig.modelUrl,
+      hfToken: GemmaConfig.hfToken,
+      displayName: GemmaConfig.displayName,
+    );
+    setState(() => _llm = gemma);
+    if (gemma.isReady) return;
+
+    final nav = Navigator.of(context, rootNavigator: true);
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('オンデバイスLLMを準備中'),
+        content: ValueListenableBuilder<String>(
+          valueListenable: gemma.phase,
+          builder: (_, phase, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ValueListenableBuilder<double>(
+                valueListenable: gemma.downloadProgress,
+                builder: (_, p, _) =>
+                    LinearProgressIndicator(value: p > 0 ? p / 100 : null),
+              ),
+              const SizedBox(height: 14),
+              Text(phase),
+              const SizedBox(height: 4),
+              const Text('初回はモデルDL（数GB）で数分かかります',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+      ),
+    ));
+    try {
+      await gemma.warmup();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(SnackBar(content: Text('Gemma 初期化エラー: $e')));
+        _useMock(); // 失敗時は Mock に戻す
+      }
+    } finally {
+      nav.pop();
+      if (mounted) setState(() {});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -233,6 +304,26 @@ class _DemoScreenState extends State<DemoScreen> {
     ]);
   }
 
+  /// Mock ↔ 実機 Gemma の切替。
+  Widget _backendToggle() {
+    final usingGemma = _llm is FlutterGemmaLlm;
+    return SegmentedButton<bool>(
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      segments: const [
+        ButtonSegment(value: false, label: Text('Mock')),
+        ButtonSegment(value: true, label: Text('Gemma')),
+      ],
+      selected: {usingGemma},
+      onSelectionChanged: _generating
+          ? null
+          : (s) => s.first ? _useGemma() : _useMock(),
+    );
+  }
+
   // ===== 上部コントロール（入力 / プリセット / 速度）=====
   Widget _controlBar() {
     return Padding(
@@ -270,7 +361,12 @@ class _DemoScreenState extends State<DemoScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          _offlineBadge(),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [_offlineBadge(), _backendToggle()],
+          ),
           const SizedBox(height: 10),
           // プリセット要望 + 速度を一括で Wrap（狭い画面でも折り返してオーバーフローしない）
           Wrap(

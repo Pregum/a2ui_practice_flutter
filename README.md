@@ -36,8 +36,26 @@ flutter run -d macos      # デスクトップで Mock LLM 動作（実機・モ
 flutter test              # コア + レンダラーのテスト
 ```
 
-> 現状の LLM は `MockLlm`（用意済みシナリオの JSONL を再生）。実機オンデバイス推論
-> （`flutter_gemma`）は `FlutterGemmaLlm` として後続で実装予定（→ [ロードマップ](#ロードマップ)）。
+> 既定の LLM は `MockLlm`（用意済みシナリオの JSONL を再生）。アプリ上部の
+> **Mock ↔ Gemma トグル**で実機オンデバイス推論（`FlutterGemmaLlm`）に切替できる。
+
+### 実機オンデバイス推論（Gemma 3n）で動かす
+
+`flutter_gemma` で Gemma 3n E2B を端末上で実行します。Gemma は gated モデルなので、
+事前に HuggingFace で **ライセンス同意**し、アクセストークンを用意してください。
+モデル（数GB）は初回起動時にダウンロードされます（端末を点灯したまま）。
+
+```bash
+flutter run -d <ANDROID_DEVICE_ID> \
+  --dart-define=HUGGINGFACE_TOKEN=hf_xxx \
+  --dart-define=GEMMA_MODEL_URL=https://huggingface.co/<repo>/resolve/main/<model>.task \
+  --dart-define=GEMMA_DISPLAY_NAME="Gemma 3n E2B"
+```
+
+- アプリ起動後、上部の **「Gemma」** を選ぶ → 初回はDL進捗ダイアログ → 準備完了で生成が実機推論に切替わる
+- 小型モデルは JSON を外すことがあるが、**Validator + 自己修正ループ**が補正する
+- `GEMMA_MODEL_URL` は配布元のファイル名に合わせて指定（Gemma 3n E2B の `.task`/`.litertlm`）
+- トグルは Mock に戻せるので、**当日トラブル時も Mock で完走**できる
 
 発表スライド（外部依存なし・オフライン動作の単体HTML、実機スクショ埋め込み済み）:
 
@@ -114,7 +132,7 @@ basic カタログを「自社デザインシステム」に差し替えた例�
 - [x] レンダラー + `support` 独自カタログ + `MockLlm`（macOS で動作）
 - [x] プリセット要望 / 複数シナリオ / progressive 演出 / オフライン演出
 - [x] Validator + 自己修正ループ（不正JSON → repair プロンプト → 再生成、上限付き）
-- [ ] **実機オンデバイス推論**（`flutter_gemma`・Android・機内モード実演）
+- [x] **実機オンデバイス推論**（`flutter_gemma` / Gemma 3n E2B・Android）。UI で Mock ↔ Gemma 切替
 - [ ] 制約付きデコード（GBNF）で小型モデルの JSON 破綻を抑制
 
 ## ライセンス / 補足
