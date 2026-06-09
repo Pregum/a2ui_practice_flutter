@@ -39,10 +39,22 @@ flutter test              # コア + レンダラーのテスト
 > 現状の LLM は `MockLlm`（用意済みシナリオの JSONL を再生）。実機オンデバイス推論
 > （`flutter_gemma`）は `FlutterGemmaLlm` として後続で実装予定（→ [ロードマップ](#ロードマップ)）。
 
-発表スライド（外部依存なし・オフライン動作の単体HTML）:
+発表スライド（外部依存なし・オフライン動作の単体HTML、実機スクショ埋め込み済み）:
 
 ```bash
 open docs/slides.html
+```
+
+### 実機スクリーンショット（自動撮影）
+
+Android 実機を操作して各状態のスクショを `screenshots/` に出力します（finder 駆動で再現性あり）。
+端末がスリープすると撮影が止まるため、撮影中は画面を点灯させておきます。
+
+```bash
+adb shell svc power stayon usb          # 撮影中スリープ防止
+flutter drive \
+  --driver=test_driver/integration_test.dart \
+  --target=integration_test/app_screenshots_test.dart -d <DEVICE_ID>
 ```
 
 ## アーキテクチャ
