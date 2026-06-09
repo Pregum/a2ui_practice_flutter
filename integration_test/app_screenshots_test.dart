@@ -35,6 +35,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
     }
 
+    // タップして数秒ぶんフレームを回す（生成完了を待つ・撮影はしない）。
+    Future<void> tapThenWait(String t, {int frames = 22}) async {
+      await tester.tap(find.text(t).first);
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+    }
+
     // ログを畳んで「生成された画面」をすっきり見せる。
     await tester.tap(find.byTooltip('ストリームログ'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -50,5 +58,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tapText('自己修正デモ');
     await shoot('03-selfheal');
-  }, timeout: const Timeout(Duration(seconds: 180)));
+
+    // ④ タップ作文（多段フロー → テキスト＋画像のマルチモーダル）
+    await tester.tap(find.byTooltip('ストリームログ')); // ログを畳む
+    await tester.pump(const Duration(milliseconds: 300));
+    await tapThenWait('タップ作文'); // step0（候補チップ）
+    await tapThenWait('お詫びして返信'); // 下書き
+    await tapThenWait('これで送る'); // 確定（テキスト＋画像）
+    await shoot('04-compose');
+
+    // ⑤ proactive 仮眠UI
+    await tapThenWait('働きすぎ検知');
+    await shoot('05-nap');
+  }, timeout: const Timeout(Duration(seconds: 300)));
 }
