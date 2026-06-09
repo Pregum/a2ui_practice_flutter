@@ -39,23 +39,37 @@ flutter test              # コア + レンダラーのテスト
 > 既定の LLM は `MockLlm`（用意済みシナリオの JSONL を再生）。アプリ上部の
 > **Mock ↔ Gemma トグル**で実機オンデバイス推論（`FlutterGemmaLlm`）に切替できる。
 
-### 実機オンデバイス推論（Gemma 3n）で動かす
+### 実機オンデバイス推論（Gemma 4 E2B）で動かす
 
-`flutter_gemma` で Gemma 3n E2B を端末上で実行します。Gemma は gated モデルなので、
-事前に HuggingFace で **ライセンス同意**し、アクセストークンを用意してください。
-モデル（数GB）は初回起動時にダウンロードされます（端末を点灯したまま）。
+`flutter_gemma` で **Gemma 4 E2B（LiteRT-LM, 2.4GB, 認証不要）** を端末上で実行します。
+既定モデルは公式 `litert-community/gemma-4-E2B-it-litert-lm`（gated でない）なので
+**トークン不要**です。
 
 ```bash
-flutter run -d <ANDROID_DEVICE_ID> \
-  --dart-define=HUGGINGFACE_TOKEN=hf_xxx \
-  --dart-define=GEMMA_MODEL_URL=https://huggingface.co/<repo>/resolve/main/<model>.task \
-  --dart-define=GEMMA_DISPLAY_NAME="Gemma 3n E2B"
+flutter run -d <ANDROID_DEVICE_ID>     # 既定で Gemma 4 E2B（token不要）
 ```
 
-- アプリ起動後、上部の **「Gemma」** を選ぶ → 初回はDL進捗ダイアログ → 準備完了で生成が実機推論に切替わる
-- 小型モデルは JSON を外すことがあるが、**Validator + 自己修正ループ**が補正する
-- `GEMMA_MODEL_URL` は配布元のファイル名に合わせて指定（Gemma 3n E2B の `.task`/`.litertlm`）
+- アプリ起動後、上部の **「Gemma」** を選ぶ → 初回DL（2.4GB・進捗ダイアログ）→ 実機推論に切替
+- 小型モデルでも、**M1 簡約プロンプト + M2 自己修正**で構造化A2UIが安定
 - トグルは Mock に戻せるので、**当日トラブル時も Mock で完走**できる
+
+**実機検証済み（Pixel 8a）**: Column / InquiryHeader / ConversationThread / ReplyBox を
+正しく入れ子にした valid な A2UI を生成。ロード ~15–55s（GPU初期化込み）/ 初トークン ~3–6s。
+
+#### モデルを使い回す（再ダウンロードを避ける）
+
+`flutter run`（更新インストール）なら一度DLすれば `flutter_gemma` がキャッシュし再利用します
+（クリーン再インストールする `flutter test` ではデータが消えて再DLになる点に注意）。
+
+確実に使い回すなら、モデルを端末の安定パスへ置いて `fromFile` で読みます:
+
+```bash
+flutter run -d <device>              # 先に一度インストール
+scripts/push_gemma_model.sh <device> # Mac のモデルを端末へ push（無ければ自動DL）
+# → アプリで「Gemma」を選ぶと fromFile でロード（再DLなし）
+```
+
+`GEMMA_MODEL_PATH` を `--dart-define` で渡せば任意パスから読めます（既定はアプリ外部 files）。
 
 発表スライド（外部依存なし・オフライン動作の単体HTML、実機スクショ埋め込み済み）:
 

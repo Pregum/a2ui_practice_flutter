@@ -22,6 +22,15 @@ class GemmaConfig {
         'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
   );
 
+  /// ローカルのモデルファイルパス（あれば DL せず fromFile で読む＝使い回し）。
+  /// 既定はアプリの外部 files ディレクトリ（権限不要・再インストールでも残る）。
+  /// ここに `adb push` しておけば二度とダウンロードしない。
+  static const String modelPath = String.fromEnvironment(
+    'GEMMA_MODEL_PATH',
+    defaultValue:
+        '/storage/emulated/0/Android/data/com.xtone.a2ui_support_demo/files/gemma-4-E2B-it.litertlm',
+  );
+
   /// 表示名（badge 等）。
   static const String displayName = String.fromEnvironment(
     'GEMMA_DISPLAY_NAME',

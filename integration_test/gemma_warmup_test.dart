@@ -7,7 +7,7 @@ import 'package:a2ui_support_demo/core/llm/gemma_config.dart';
 import 'package:a2ui_support_demo/core/llm/prompt/system_prompt.dart';
 
 /// 実機 Gemma を実際にダウンロード→ロード→1件生成して確認する。
-/// 実行: flutter test integration_test/gemma_warmup_test.dart -d <device>
+/// 実行: flutter test integration_test/gemma_warmup_test.dart -d DEVICE_ID
 /// 初回は 2.4GB のDLで数分かかる（端末を点灯したまま）。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +15,7 @@ void main() {
   testWidgets('Gemma をDL・ロードして A2UI を1件生成する', (tester) async {
     final gemma = FlutterGemmaLlm(
       modelUrl: GemmaConfig.modelUrl,
+      modelPath: GemmaConfig.modelPath,
       hfToken: GemmaConfig.tokenOrNull,
       displayName: GemmaConfig.displayName,
     );

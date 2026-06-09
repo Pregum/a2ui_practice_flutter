@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 
@@ -18,6 +20,7 @@ import 'llm_backend.dart';
 class FlutterGemmaLlm implements LlmBackend {
   FlutterGemmaLlm({
     required this.modelUrl,
+    this.modelPath,
     this.hfToken,
     this.displayName = 'Gemma 4 E2B',
     this.maxTokens = 2048,
@@ -26,6 +29,9 @@ class FlutterGemmaLlm implements LlmBackend {
   });
 
   final String modelUrl;
+
+  /// ローカルにモデルがあればこのパスから fromFile で読む（DLを回避）。
+  final String? modelPath;
   final String? hfToken;
   final String displayName;
   final int maxTokens;
@@ -54,20 +60,27 @@ class FlutterGemmaLlm implements LlmBackend {
     phase.value = '初期化中';
     await FlutterGemma.initialize(huggingFaceToken: hfToken);
 
-    phase.value = 'モデル取得中';
     // 拡張子でファイル種別を判定（.litertlm は LiteRT-LM FFI、.task は MediaPipe）。
-    final fileType = modelUrl.endsWith('.litertlm')
+    final ext = (modelPath?.isNotEmpty ?? false) ? modelPath! : modelUrl;
+    final fileType = ext.endsWith('.litertlm')
         ? ModelFileType.litertlm
-        : (modelUrl.endsWith('.bin') || modelUrl.endsWith('.tflite'))
+        : (ext.endsWith('.bin') || ext.endsWith('.tflite'))
             ? ModelFileType.binary
             : ModelFileType.task;
-    // Gemma 4 はネイティブ function-calling トークン対応の専用 ModelType。
-    await FlutterGemma.installModel(modelType: ModelType.gemma4, fileType: fileType)
-        .fromNetwork(modelUrl, token: hfToken)
-        .withProgress((p) {
-      downloadProgress.value = p.toDouble();
-      phase.value = 'モデルDL中 ${p.toStringAsFixed(0)}%';
-    }).install(); // 既にインストール済みならDLをスキップして active 化
+
+    final builder =
+        FlutterGemma.installModel(modelType: ModelType.gemma4, fileType: fileType);
+    // ローカルにモデルがあれば fromFile（DL回避・使い回し）、無ければ HF からDL。
+    if (modelPath != null && File(modelPath!).existsSync()) {
+      phase.value = 'ローカルモデル読込';
+      await builder.fromFile(modelPath!).install();
+    } else {
+      phase.value = 'モデル取得中';
+      await builder.fromNetwork(modelUrl, token: hfToken).withProgress((p) {
+        downloadProgress.value = p.toDouble();
+        phase.value = 'モデルDL中 ${p.toStringAsFixed(0)}%';
+      }).install();
+    }
 
     phase.value = 'モデルロード中';
     _model = await FlutterGemma.getActiveModel(
