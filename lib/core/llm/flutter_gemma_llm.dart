@@ -19,7 +19,7 @@ class FlutterGemmaLlm implements LlmBackend {
   FlutterGemmaLlm({
     required this.modelUrl,
     this.hfToken,
-    this.displayName = 'Gemma 3n E2B',
+    this.displayName = 'Gemma 4 E2B',
     this.maxTokens = 2048,
     this.temperature = 0.2,
     this.topK = 1,
@@ -55,7 +55,8 @@ class FlutterGemmaLlm implements LlmBackend {
     await FlutterGemma.initialize(huggingFaceToken: hfToken);
 
     phase.value = 'モデル取得中';
-    await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
+    // Gemma 4 はネイティブ function-calling トークン対応の専用 ModelType。
+    await FlutterGemma.installModel(modelType: ModelType.gemma4)
         .fromNetwork(modelUrl, token: hfToken)
         .withProgress((p) {
       downloadProgress.value = p.toDouble();
