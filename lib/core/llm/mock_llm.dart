@@ -46,8 +46,18 @@ class MockLlm implements LlmBackend {
     bool has(List<String> kw) => kw.any(user.contains);
     // repair プロンプト（検証失敗の差し戻し）を受けたら修正版を返す。
     if (has(const ['VALIDATION_FAILED', 'スキーマ検証に失敗'])) return _repairedConsole;
+    // タップ作文フローの前進（候補チップのタップ＝event prompt）。
+    if (user.startsWith('flow:send')) return _chatFinal;
+    if (user.startsWith('compose:polite') ||
+        user.startsWith('compose:refund') ||
+        user.startsWith('compose:add')) {
+      return _chatDraft2;
+    }
+    if (user.startsWith('compose:')) return _chatDraft1;
     // 自己修正デモ: わざと壊れた UI を最初に出す。
     if (has(const ['自己修正', '壊れ'])) return _brokenConsole;
+    if (has(const ['タップ', '下書き', 'チャット', '作文'])) return _chatStep0;
+    if (has(const ['働きすぎ', '仮眠', '休憩', 'うながして'])) return _napSurface;
     if (has(const ['解約', 'キャンセル', '退会', '解除'])) return _cancelConsole;
     if (has(const ['不具合', '障害', 'ログインできない', 'エラー', 'バグ', '動かない'])) {
       return _incidentConsole;
@@ -183,4 +193,92 @@ const List<String> _incidentConsole = [
   '{"version":"v0.9","updateDataModel":{"surfaceId":"incident_console","path":"/reply","value":{'
       '"draft":"山田様\\n\\nご不便をおかけし申し訳ございません。現在ログイン障害を調査しております。回避策として、シークレットウィンドウでの再ログインをお試しください。復旧見込みは追ってご連絡いたします。",'
       '"canned":"incident_ack"}}}',
+];
+
+// ============================================================
+// タップ作文（マルチモーダル・チャット）— タップだけで文章＋画像を作る
+// ============================================================
+
+/// step0: 文脈を読んで AI 候補チップを出す（proactive + 打ち込まない）。
+const List<String> _chatStep0 = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"chat_compose","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"chat_compose","components":['
+      '{"id":"root","component":"Column","children":["thread","chips"]},'
+      '{"id":"thread","component":"ConversationThread","messages":['
+      '{"role":"customer","text":"先日お願いした資料、いつ頃いただけますか？","time":"13:40"}]},'
+      '{"id":"chips","component":"SuggestionChips","chips":['
+      '{"label":"お詫びして返信","name":"compose:apologize"},'
+      '{"label":"日程を伝える","name":"compose:schedule"},'
+      '{"label":"お礼を添える","name":"compose:thanks"}]}'
+      ']}}',
+];
+
+/// 1タップ後: 下書きが現れ、さらに調整チップが出る。
+const List<String> _chatDraft1 = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"chat_compose","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"chat_compose","components":['
+      '{"id":"root","component":"Column","children":["thread","card","chips"]},'
+      '{"id":"thread","component":"ConversationThread","messages":['
+      '{"role":"customer","text":"先日お願いした資料、いつ頃いただけますか？","time":"13:40"}]},'
+      '{"id":"card","component":"Card","child":"col"},'
+      '{"id":"col","component":"Column","children":["lbl","txt"]},'
+      '{"id":"lbl","component":"Text","text":"✍️ 下書き（タップで作成中）","variant":"caption"},'
+      '{"id":"txt","component":"Text","text":"お待たせしております。ご依頼の資料は明日中にお送りします。"},'
+      '{"id":"chips","component":"SuggestionChips","chips":['
+      '{"label":"もっと丁寧に","name":"compose:polite"},'
+      '{"label":"一文添える","name":"compose:add"},'
+      '{"label":"これで送る","name":"flow:send"}]}'
+      ']}}',
+];
+
+/// さらにタップ: 下書きが洗練される。
+const List<String> _chatDraft2 = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"chat_compose","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"chat_compose","components":['
+      '{"id":"root","component":"Column","children":["thread","card","chips"]},'
+      '{"id":"thread","component":"ConversationThread","messages":['
+      '{"role":"customer","text":"先日お願いした資料、いつ頃いただけますか？","time":"13:40"}]},'
+      '{"id":"card","component":"Card","child":"col"},'
+      '{"id":"col","component":"Column","children":["lbl","txt"]},'
+      '{"id":"lbl","component":"Text","text":"✍️ 下書き（より丁寧に）","variant":"caption"},'
+      '{"id":"txt","component":"Text","text":"お世話になっております。ご依頼の資料につきまして、明日の正午までに必ずお送りいたします。ご連絡が遅くなり申し訳ございません。"},'
+      '{"id":"chips","component":"SuggestionChips","chips":['
+      '{"label":"さらに丁寧に","name":"compose:polite"},'
+      '{"label":"画像を添える","name":"compose:add"},'
+      '{"label":"これで送る","name":"flow:send"}]}'
+      ']}}',
+];
+
+/// 確定: テキスト＋画像を一斉生成（マルチモーダル）。画像は端末内から選択。
+const List<String> _chatFinal = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"chat_compose","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"chat_compose","components":['
+      '{"id":"root","component":"Column","children":["thread","sent","imgcard"]},'
+      '{"id":"thread","component":"ConversationThread","messages":['
+      '{"role":"customer","text":"先日お願いした資料、いつ頃いただけますか？","time":"13:40"},'
+      '{"role":"agent","text":"お世話になっております。ご依頼の資料は明日の正午までに必ずお送りいたします。","time":"13:42"}]},'
+      '{"id":"sent","component":"Text","text":"✅ キーボードを使わずタップだけで作成・送信。テキストと画像をまとめて生成しました。","variant":"caption"},'
+      '{"id":"imgcard","component":"Card","child":"imgcol"},'
+      '{"id":"imgcol","component":"Column","children":["imgcap","img"]},'
+      '{"id":"imgcap","component":"Text","text":"添付：内容に合う画像を端末内から選択","variant":"caption"},'
+      '{"id":"img","component":"Image","asset":"assets/images/reply_apology.png"}'
+      ']}}',
+];
+
+// ============================================================
+// proactive 仮眠UI — 働きすぎを察知して向こうから現れる
+// ============================================================
+const List<String> _napSurface = [
+  '{"version":"v0.9","createSurface":{"surfaceId":"wellbeing","catalogId":"https://example.com/catalog/support"}}',
+  '{"version":"v0.9","updateComponents":{"surfaceId":"wellbeing","components":['
+      '{"id":"root","component":"Column","children":["card"]},'
+      '{"id":"card","component":"Card","child":"col"},'
+      '{"id":"col","component":"Column","children":["title","sub","timer","actions"]},'
+      '{"id":"title","component":"Text","text":"⏰ 3時間 休憩なしで作業中です","variant":"h2"},'
+      '{"id":"sub","component":"Text","text":"端末内LLMがあなたのペースを見て、少しの休憩を提案しています。","variant":"caption"},'
+      '{"id":"timer","component":"RestTimer","seconds":300,"label":"5分 仮眠タイマー"},'
+      '{"id":"actions","component":"QuickActions","actions":['
+      '{"label":"5分タイマーを開始","name":"napStart"},'
+      '{"label":"離席する","name":"leave"}]}'
+      ']}}',
 ];

@@ -28,6 +28,8 @@ const List<_Preset> _presets = [
   _Preset('解約の申し出', Icons.exit_to_app_outlined, '解約したいという問い合わせの対応画面を出して'),
   _Preset('ログイン障害', Icons.bug_report_outlined, 'ログインできない不具合の対応画面を出して'),
   _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して'),
+  _Preset('タップ作文', Icons.touch_app_outlined, 'チャットの返信をタップで下書きしたい'),
+  _Preset('働きすぎ検知', Icons.self_improvement_outlined, '働きすぎを検知して休憩をうながして'),
 ];
 
 /// 生成速度プリセット（progressive rendering の演出用）。
@@ -82,17 +84,20 @@ class _DemoScreenState extends State<DemoScreen> {
   }
 
   /// 生成 → 検証 →（失敗なら）自己修正 のループ。
-  Future<void> _generate() async {
+  ///
+  /// [overridePrompt] を渡すと入力欄でなくそれを要望に使う（フロー前進用）。
+  /// [fresh]=false なら画面だけ作り直しログは残す（多段フローの継続）。
+  Future<void> _generate({String? overridePrompt, bool fresh = true}) async {
     if (_generating) return;
     setState(() => _generating = true);
-    _store.reset();
+    fresh ? _store.reset() : _store.clearSurfaces();
 
     // 速度プリセットを Mock に反映（実機LLMでは無視される）。
     final llm = _llm;
     if (llm is MockLlm) llm.delay = _speeds[_speedIndex].delay;
 
     try {
-      var prompt = _input.text;
+      var prompt = overridePrompt ?? _input.text;
       for (var attempt = 0; attempt <= _maxRepairs; attempt++) {
         if (attempt == 0) {
           _store.addLog(LogKind.info, '▶ 生成開始（端末内LLM: ${_llm.name}）');
@@ -161,6 +166,13 @@ class _DemoScreenState extends State<DemoScreen> {
 
   void _onEvent(String name, Map<String, dynamic> ctx) {
     _store.addLog(LogKind.event, 'event: $name  $ctx');
+    // フロー前進イベントは「次の surface」を生成（Action Dispatcher → 次surface）。
+    // タップ＝文章を組み立てる多段フロー（compose:）や送信（flow:）を実現する。
+    if (name.startsWith('compose:') || name.startsWith('flow:')) {
+      _store.addLog(LogKind.info, '→ $name で次の画面を生成');
+      _generate(overridePrompt: name, fresh: false);
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(SnackBar(

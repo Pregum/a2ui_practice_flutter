@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/a2ui/component/a2ui_component.dart';
@@ -101,6 +103,16 @@ class A2uiRenderer extends StatelessWidget {
         return _replyBox(ctx, c, b);
       case 'QuickActions':
         return _quickActions(ctx, c, b);
+      case 'Image':
+        return _image(ctx, c, b);
+      case 'SuggestionChips':
+        return _suggestionChips(ctx, c, b);
+      case 'RestTimer':
+        return _RestTimer(
+          key: ValueKey('timer_${c.id}'),
+          seconds: (b.resolve(c.props['seconds']) as num?)?.toInt() ?? 300,
+          label: b.resolveString(c.props['label']),
+        );
 
       default:
         return _error('未知のコンポーネント: ${c.type}');
@@ -425,6 +437,77 @@ class A2uiRenderer extends StatelessWidget {
     );
   }
 
+  // ============ マルチモーダル / 提案 ============
+
+  /// 画像。asset（端末内）優先 → url → emoji ステッカーの順でフォールバック。
+  /// オフライン前提なので、デモは asset / emoji を使う。
+  Widget _image(BuildContext ctx, A2uiComponent c, DataBinding b) {
+    final asset = b.resolveString(c.props['asset']);
+    final url = b.resolveString(c.props['url']);
+    final emoji = b.resolveString(c.props['emoji']);
+    Widget inner;
+    if (asset.isNotEmpty) {
+      inner = Image.asset(asset,
+          fit: BoxFit.cover, errorBuilder: (_, _, _) => _emojiTile('🖼️'));
+    } else if (url.isNotEmpty) {
+      inner = Image.network(url,
+          fit: BoxFit.cover, errorBuilder: (_, _, _) => _emojiTile('🖼️'));
+    } else {
+      inner = _emojiTile(emoji.isEmpty ? '🖼️' : emoji);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: AspectRatio(aspectRatio: 16 / 9, child: inner),
+    );
+  }
+
+  Widget _emojiTile(String emoji) => DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFe8eefc), Color(0xFFf6e9ff)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(child: Text(emoji, style: const TextStyle(fontSize: 56))),
+      );
+
+  /// AI が出すタップ候補。タップで event を発火し、フローを次の surface へ進める。
+  Widget _suggestionChips(BuildContext ctx, A2uiComponent c, DataBinding b) {
+    final chips = (c.props['chips'] as List?) ?? const [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Icon(Icons.auto_awesome, size: 16, color: Theme.of(ctx).colorScheme.primary),
+          const SizedBox(width: 6),
+          Text('AI 候補（タップで作成）',
+              style: Theme.of(ctx)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(color: Colors.grey.shade600)),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final ch in chips.whereType<Map>())
+              ActionChip(
+                avatar: const Icon(Icons.add, size: 16),
+                label: Text('${ch['label'] ?? ''}'),
+                onPressed: () {
+                  final ctxMap = b.resolveDeep(ch['context'] ?? {});
+                  onEvent('${ch['name']}',
+                      Map<String, dynamic>.from(ctxMap as Map));
+                },
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
   // ============ 小物 ============
 
   Widget _chip(String label, MaterialColor color, {required bool filled}) {
@@ -517,6 +600,100 @@ class _BoundTextFieldState extends State<_BoundTextField> {
         hintText: '返信を入力…',
       ),
       onChanged: widget.onChanged,
+    );
+  }
+}
+
+/// 休憩カウントダウン（proactive 仮眠UI 用）。実時間でカウントダウンする。
+class _RestTimer extends StatefulWidget {
+  const _RestTimer({super.key, required this.seconds, required this.label});
+  final int seconds;
+  final String label;
+
+  @override
+  State<_RestTimer> createState() => _RestTimerState();
+}
+
+class _RestTimerState extends State<_RestTimer> {
+  late int _remaining = widget.seconds;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_remaining > 0) {
+          _remaining--;
+        } else {
+          _timer?.cancel();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String get _mmss {
+    final m = (_remaining ~/ 60).toString().padLeft(2, '0');
+    final s = (_remaining % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final done = _remaining <= 0;
+    final frac = widget.seconds == 0 ? 0.0 : _remaining / widget.seconds;
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: scheme.secondaryContainer.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: done ? 1 : frac,
+                    strokeWidth: 5,
+                  ),
+                  Icon(done ? Icons.check : Icons.bedtime_outlined, size: 22),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.label.isEmpty ? '休憩タイマー' : widget.label,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(done ? 'おつかれさまでした' : _mmss,
+                      style: TextStyle(
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          fontSize: done ? 18 : 30,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

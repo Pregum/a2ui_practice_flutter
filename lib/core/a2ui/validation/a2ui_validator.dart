@@ -9,6 +9,8 @@ const Set<String> supportCatalogComponents = {
   'InquiryHeader', 'CustomerProfileCard', 'ConversationThread',
   'StatusBadge', 'PriorityTag', 'SlaIndicator', 'KnowledgeSuggestion',
   'CannedResponsePicker', 'ReplyBox', 'QuickActions',
+  // マルチモーダル / 提案 / proactive
+  'Image', 'SuggestionChips', 'RestTimer',
 };
 
 /// A2UI サーフェスのスキーマ検証。
