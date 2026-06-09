@@ -154,7 +154,6 @@ class _DemoScreenState extends State<DemoScreen> {
       ..showSnackBar(SnackBar(
         content: Text('イベント発火: $name  $ctx'),
         behavior: SnackBarBehavior.floating,
-        width: 520,
       ));
   }
 
@@ -163,13 +162,7 @@ class _DemoScreenState extends State<DemoScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 16,
-        title: Row(
-          children: [
-            const Text('A2UI サポートコンソール'),
-            const SizedBox(width: 14),
-            _offlineBadge(),
-          ],
-        ),
+        title: const Text('A2UI サポートコンソール', overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             tooltip: 'ストリームログ',
@@ -184,15 +177,32 @@ class _DemoScreenState extends State<DemoScreen> {
           _controlBar(),
           const Divider(height: 1),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _surfaceArea()),
-                if (_showLog) ...[
-                  const VerticalDivider(width: 1),
-                  SizedBox(width: 360, child: _logPanel()),
-                ],
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 広い画面（デスクトップ）は左右分割、狭い画面（スマホ）は上下分割。
+                final wide = constraints.maxWidth >= 720;
+                if (wide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _surfaceArea()),
+                      if (_showLog) ...[
+                        const VerticalDivider(width: 1),
+                        SizedBox(width: 360, child: _logPanel()),
+                      ],
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    Expanded(flex: 3, child: _surfaceArea()),
+                    if (_showLog) ...[
+                      const Divider(height: 1),
+                      Expanded(flex: 2, child: _logPanel()),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -217,9 +227,8 @@ class _DemoScreenState extends State<DemoScreen> {
                     fontSize: 11.5, color: c, fontWeight: FontWeight.w600)),
           ]),
         );
-    return Row(mainAxisSize: MainAxisSize.min, children: [
+    return Wrap(spacing: 6, runSpacing: 6, children: [
       pill(Icons.flight, 'オフライン', Colors.green),
-      const SizedBox(width: 6),
       pill(Icons.smartphone, '端末内LLM: ${_llm.name}', Colors.blue),
     ]);
   }
@@ -261,28 +270,25 @@ class _DemoScreenState extends State<DemoScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
+          _offlineBadge(),
+          const SizedBox(height: 10),
+          // プリセット要望 + 速度を一括で Wrap（狭い画面でも折り返してオーバーフローしない）
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    for (final p in _presets)
-                      ActionChip(
-                        avatar: Icon(p.icon, size: 16),
-                        label: Text(p.label),
-                        onPressed: _generating
-                            ? null
-                            : () {
-                                _input.text = p.prompt;
-                                _generate();
-                              },
-                      ),
-                  ],
+              for (final p in _presets)
+                ActionChip(
+                  avatar: Icon(p.icon, size: 16),
+                  label: Text(p.label),
+                  onPressed: _generating
+                      ? null
+                      : () {
+                          _input.text = p.prompt;
+                          _generate();
+                        },
                 ),
-              ),
-              const SizedBox(width: 12),
               _speedControl(),
             ],
           ),
@@ -295,8 +301,8 @@ class _DemoScreenState extends State<DemoScreen> {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.speed, size: 16, color: Colors.grey.shade600),
       const SizedBox(width: 6),
-      Text('生成速度', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-      const SizedBox(width: 8),
+      Text('速度', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+      const SizedBox(width: 6),
       SegmentedButton<int>(
         showSelectedIcon: false,
         style: const ButtonStyle(
@@ -326,12 +332,15 @@ class _DemoScreenState extends State<DemoScreen> {
           if (surface == null) return _emptyState();
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: _deviceFrame(
-                child: A2uiRenderer(
-                  surface: surface,
-                  store: _store,
-                  onEvent: _onEvent,
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: _deviceFrame(
+                  child: A2uiRenderer(
+                    surface: surface,
+                    store: _store,
+                    onEvent: _onEvent,
+                  ),
                 ),
               ),
             ),
@@ -343,7 +352,7 @@ class _DemoScreenState extends State<DemoScreen> {
 
   Widget _deviceFrame({required Widget child}) {
     return Container(
-      width: 560,
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
@@ -367,9 +376,12 @@ class _DemoScreenState extends State<DemoScreen> {
               children: [
                 Icon(Icons.smartphone, size: 14, color: Colors.grey.shade600),
                 const SizedBox(width: 6),
-                Text('端末画面 ・ A2UI レンダリング',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Flexible(
+                  child: Text('端末画面 ・ A2UI レンダリング',
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                ),
                 const Spacer(),
                 Icon(Icons.flight, size: 13, color: Colors.green.shade600),
                 const SizedBox(width: 4),
