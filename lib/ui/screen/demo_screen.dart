@@ -133,10 +133,14 @@ class _DemoScreenState extends State<DemoScreen> {
     }
   }
 
+  /// バックエンドに応じたシステムプロンプト（小型 Gemma は簡約版で安定化）。
+  String get _systemPrompt =>
+      _llm is FlutterGemmaLlm ? supportSystemPromptCompact : supportSystemPrompt;
+
   /// 1回ぶんの生成ストリームをパースして適用する。
   Future<void> _stream(String prompt) async {
     final parser = JsonlStreamParser();
-    final stream = _llm.generate(system: supportSystemPrompt, user: prompt);
+    final stream = _llm.generate(system: _systemPrompt, user: prompt);
     await for (final chunk in stream) {
       for (final line in parser.feed(chunk)) {
         _consume(line);

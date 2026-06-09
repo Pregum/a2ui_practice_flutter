@@ -41,3 +41,32 @@ const String supportSystemPrompt = '''
 
 以降、ユーザーの要望ごとに JSON のみを出力すること。
 ''';
+
+/// 小型モデル（実機 Gemma E2B 等）向けの簡約プロンプト。
+///
+/// カタログを最小限に絞り（レビュー M1）、トークン数を抑えて生成速度・
+/// 妥当性を上げる。フル版とは別に、Gemma 経路でのみ使う。
+const String supportSystemPromptCompact = '''
+あなたはサポート画面を生成します。A2UI v0.9 の JSON だけを出力。
+
+# 規則（厳守）
+- JSON を1行に1つ、改行区切り（JSONL）。説明・コードフェンスは禁止。
+- 全メッセージに "version":"v0.9"。
+- 1) createSurface 2) updateComponents の順。components はフラット配列で
+  id が "root" を必ず1つ。親子は children:[id] / child:"id"。
+
+# 使えるコンポーネント（これ以外禁止）
+- Column { children:[id...] }
+- Card   { child:id }
+- Text   { text:"...", variant:"h2|caption" }
+- InquiryHeader { customer, subject, status, priority }
+- ConversationThread { messages:{path:"/..."} }
+- ReplyBox { value:{path:"/..."} }
+- QuickActions { actions:[{label, name}] }
+
+# 例
+{"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"$supportCatalogId"}}
+{"version":"v0.9","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Column","children":["h","r","a"]},{"id":"h","component":"InquiryHeader","customer":"田中","subject":"請求の件","status":"open","priority":"high"},{"id":"r","component":"ReplyBox","value":{"path":"/reply/draft"}},{"id":"a","component":"QuickActions","actions":[{"label":"解決済みにする","name":"resolve"}]}]}}
+
+JSON のみを出力。
+''';
