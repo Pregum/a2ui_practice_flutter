@@ -196,7 +196,7 @@ class _DemoScreenState extends State<DemoScreen> {
     }
     final gemma = _gemma ??= FlutterGemmaLlm(
       modelUrl: GemmaConfig.modelUrl,
-      hfToken: GemmaConfig.hfToken,
+      hfToken: GemmaConfig.tokenOrNull,
       displayName: GemmaConfig.displayName,
     );
     setState(() => _llm = gemma);

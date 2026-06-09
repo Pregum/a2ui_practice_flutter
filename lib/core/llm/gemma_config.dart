@@ -1,22 +1,25 @@
-/// 実機 Gemma の設定。トークンとモデルURLは `--dart-define` で渡す
-/// （gated モデルなので、事前に HuggingFace 上で Gemma のライセンス同意が必要）。
+/// 実機 Gemma の設定。
+///
+/// 既定は **Gemma 4 E2B（LiteRT-LM, 認証不要）**。公式 LiteRT コミュニティ配布で
+/// gated ではないため、トークン無しでそのままダウンロードできる。
+/// 別モデル/別端末最適化版を使う場合だけ `--dart-define` で上書きする。
 ///
 /// ```
-/// flutter run -d <device> \
-///   --dart-define=HUGGINGFACE_TOKEN=hf_xxx \
-///   --dart-define=GEMMA_MODEL_URL=https://huggingface.co/.../gemma-3n-E2B-it.task
+/// flutter run -d <device>                       # 既定 Gemma 4 E2B でOK（token不要）
+/// flutter run -d <device> \                      # 上書きする場合
+///   --dart-define=GEMMA_MODEL_URL=https://huggingface.co/.../model.litertlm \
+///   --dart-define=HUGGINGFACE_TOKEN=hf_xxx       # gated モデルを使う時だけ
 /// ```
 class GemmaConfig {
-  /// HuggingFace アクセストークン（gated モデルのDLに必要）。
+  /// HuggingFace アクセストークン（gated モデルを使う時だけ必要。既定は空でOK）。
   static const String hfToken = String.fromEnvironment('HUGGINGFACE_TOKEN');
 
-  /// モデルファイルURL（.litertlm / LiteRT-LM、4-bit 量子化推奨）。
-  /// Gemma 4 E2B を既定にする。実URL/ファイル名は配布元で変わり得るので、
-  /// ライセンス同意の上 dart-define で上書きすること（下記は要確認のプレースホルダ）。
+  /// モデルファイルURL（.litertlm）。既定は Gemma 4 E2B（2.4GB・認証不要・
+  /// 汎用ビルド。Pixel 等の端末別最適化版もあるが汎用版が安全）。
   static const String modelUrl = String.fromEnvironment(
     'GEMMA_MODEL_URL',
     defaultValue:
-        'https://huggingface.co/litert-community/Gemma4-E2B-IT/resolve/main/gemma-4-E2B-it-int4.litertlm',
+        'https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm',
   );
 
   /// 表示名（badge 等）。
@@ -25,6 +28,9 @@ class GemmaConfig {
     defaultValue: 'Gemma 4 E2B',
   );
 
-  /// トークンが設定されていれば実機 Gemma を試せる。
-  static bool get isConfigured => hfToken.isNotEmpty;
+  /// トークンは空文字なら未指定として扱う（非 gated モデルでは不要）。
+  static String? get tokenOrNull => hfToken.isEmpty ? null : hfToken;
+
+  /// モデルURLがあれば実機 Gemma を試せる（既定URLがあるので常に true）。
+  static bool get isConfigured => modelUrl.isNotEmpty;
 }
