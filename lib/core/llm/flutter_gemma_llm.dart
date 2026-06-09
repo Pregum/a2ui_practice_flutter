@@ -55,8 +55,14 @@ class FlutterGemmaLlm implements LlmBackend {
     await FlutterGemma.initialize(huggingFaceToken: hfToken);
 
     phase.value = 'モデル取得中';
+    // 拡張子でファイル種別を判定（.litertlm は LiteRT-LM FFI、.task は MediaPipe）。
+    final fileType = modelUrl.endsWith('.litertlm')
+        ? ModelFileType.litertlm
+        : (modelUrl.endsWith('.bin') || modelUrl.endsWith('.tflite'))
+            ? ModelFileType.binary
+            : ModelFileType.task;
     // Gemma 4 はネイティブ function-calling トークン対応の専用 ModelType。
-    await FlutterGemma.installModel(modelType: ModelType.gemma4)
+    await FlutterGemma.installModel(modelType: ModelType.gemma4, fileType: fileType)
         .fromNetwork(modelUrl, token: hfToken)
         .withProgress((p) {
       downloadProgress.value = p.toDouble();
