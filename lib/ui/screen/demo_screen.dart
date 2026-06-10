@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/a2ui/parser/jsonl_stream_parser.dart';
 import '../../core/a2ui/state/surface_store.dart';
@@ -74,6 +76,17 @@ class _DemoScreenState extends State<DemoScreen> {
   void initState() {
     super.initState();
     _mock.warmup();
+    _ensureModelDir();
+  }
+
+  /// adb push でモデルを置けるよう、外部 files ディレクトリを作っておく。
+  /// shell（adb mkdir）が作ると所有者が違いアプリから読めないため、
+  /// システム API（getExternalFilesDir）に正しい所有者で作らせる。
+  Future<void> _ensureModelDir() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await getExternalStorageDirectory();
+    } catch (_) {/* 作れなくても fromNetwork にフォールバックするだけ */}
   }
 
   @override
@@ -190,7 +203,7 @@ class _DemoScreenState extends State<DemoScreen> {
         ..clearSnackBars()
         ..showSnackBar(const SnackBar(
           content: Text(
-              'HUGGINGFACE_TOKEN が未設定です。--dart-define=HUGGINGFACE_TOKEN=hf_xxx を付けて起動してください'),
+              'モデルURLが未設定です。--dart-define=GEMMA_MODEL_URL=... を付けて起動してください'),
         ));
       return;
     }

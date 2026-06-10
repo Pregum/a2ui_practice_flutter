@@ -5,18 +5,12 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 
 import 'llm_backend.dart';
 
-/// 実機オンデバイス推論バックエンド（Gemma 3n / Gemma 4 等）。
+/// 実機オンデバイス推論バックエンド（Gemma 4 E2B 等）。
 ///
 /// `flutter_gemma` 経由でモデルをロードし、A2UI JSONL をストリーム生成する。
-/// モデルは gated（ライセンス同意が必要）なので、初回は HuggingFace から
-/// ダウンロードする（`--dart-define` でトークンとURLを渡す）。
-///
-/// 実行例:
-/// ```
-/// flutter run -d <device> \
-///   --dart-define=HUGGINGFACE_TOKEN=hf_xxx \
-///   --dart-define=GEMMA_MODEL_URL=https://huggingface.co/.../gemma-3n-E2B-it.task
-/// ```
+/// 既定モデル（Gemma 4 E2B / LiteRT-LM）は認証不要で DL でき、`modelPath` に
+/// ファイルがあれば fromFile で読んで DL を回避する（使い回し）。
+/// gated モデルを使う時だけ `--dart-define=HUGGINGFACE_TOKEN=hf_xxx` を渡す。
 class FlutterGemmaLlm implements LlmBackend {
   FlutterGemmaLlm({
     required this.modelUrl,
