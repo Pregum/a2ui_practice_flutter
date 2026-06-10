@@ -64,9 +64,18 @@ const String supportSystemPromptCompact = '''
 - ReplyBox { value:{path:"/..."} }
 - QuickActions { actions:[{label, name}] }
 
-# 例
+# 例1（要望: 請求が二重に引かれた問い合わせの対応画面）
 {"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"$supportCatalogId"}}
 {"version":"v0.9","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Column","children":["h","r","a"]},{"id":"h","component":"InquiryHeader","customer":"田中","subject":"請求の件","status":"open","priority":"high"},{"id":"r","component":"ReplyBox","value":{"path":"/reply/draft"}},{"id":"a","component":"QuickActions","actions":[{"label":"解決済みにする","name":"resolve"}]}]}}
 
+# 例2（要望: 解約したいという問い合わせの対応画面）
+{"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"$supportCatalogId"}}
+{"version":"v0.9","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Column","children":["h","t","a"]},{"id":"h","component":"InquiryHeader","customer":"佐藤","subject":"解約の申し出","status":"open","priority":"normal"},{"id":"t","component":"Text","text":"解約理由を伺い、代替プランを提案してください。","variant":"caption"},{"id":"a","component":"QuickActions","actions":[{"label":"プラン変更を提案","name":"offer_plan"},{"label":"解約手続きへ","name":"proceed_cancel"}]}]}}
+
+# 例3（要望: ログインできない不具合の対応画面）
+{"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"$supportCatalogId"}}
+{"version":"v0.9","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Column","children":["h","t","a"]},{"id":"h","component":"InquiryHeader","customer":"鈴木","subject":"ログイン不可","status":"open","priority":"urgent"},{"id":"t","component":"Text","text":"再現手順とエラーメッセージを確認してください。","variant":"caption"},{"id":"a","component":"QuickActions","actions":[{"label":"パスワード再設定を案内","name":"send_reset"},{"label":"エスカレーション","name":"escalate"}]}]}}
+
+要望に最も近い例の構成を踏襲しつつ、件名・優先度・アクションは要望に合わせて変える。
 JSON のみを出力。
 ''';

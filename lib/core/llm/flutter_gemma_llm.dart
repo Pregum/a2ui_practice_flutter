@@ -100,6 +100,11 @@ class FlutterGemmaLlm implements LlmBackend {
       await session.addQueryChunk(Message.text(text: user, isUser: true));
       yield* session.getResponseAsync();
     } finally {
+      // 途中キャンセル（暴走ガード等）でも native の decode を確実に止める。
+      // close() は会話を解放するだけで生成中のターンは止めないため明示する。
+      try {
+        await session.stopGeneration();
+      } catch (_) {/* 生成完了後の呼び出しは失敗してよい */}
       await session.close();
     }
   }

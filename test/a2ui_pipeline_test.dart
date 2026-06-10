@@ -44,6 +44,63 @@ void main() {
       final r = p.feed('```json\n');
       expect(r.single.ok, isFalse);
     });
+
+    test('JSON の途中に改行が入っても波括弧対応で復元する', () {
+      // 小型モデルが1つの updateComponents を複数行に割って出すケース。
+      final p = JsonlStreamParser();
+      final results = <ParsedLine>[
+        ...p.feed('{"version":"v0.9",\n'),
+        ...p.feed('  "updateComponents":{"surfaceId":"s",\n'),
+        ...p.feed('    "components":[{"id":"root","component":"Column",'
+            '"children":[]}]}}\n'),
+        ...p.flush(),
+      ];
+      expect(results.single.ok, isTrue);
+    });
+
+    test('同一行に複数オブジェクトが並んでも分割される', () {
+      final p = JsonlStreamParser();
+      final results = <ParsedLine>[
+        ...p.feed('{"version":"v0.9","createSurface":{"surfaceId":"s","catalogId":"c"}}'
+            '{"version":"v0.9","deleteSurface":{"surfaceId":"s"}}'),
+        ...p.flush(),
+      ];
+      expect(results.where((r) => r.ok).length, 2);
+    });
+
+    test('末尾の閉じ括弧転置を自動修復する（実機 Gemma の実例）', () {
+      // Gemma 4 E2B が実機で出した壊れ方: 末尾が ]}} ではなく }]} になる。
+      final p = JsonlStreamParser();
+      final results = <ParsedLine>[
+        ...p.feed('{"version":"v0.9","updateComponents":{"surfaceId":"s1",'
+            '"components":[{"id":"root","component":"Column",'
+            '"children":["a"]},{"id":"a","component":"QuickActions",'
+            '"actions":[{"label":"確認","name":"view"}]}}]}\n'),
+        ...p.flush(),
+      ];
+      expect(results.single.ok, isTrue);
+      expect(results.single.note, '閉じ括弧を自動修復');
+    });
+
+    test('トークン切れで閉じ残した JSON は flush で補完される', () {
+      final p = JsonlStreamParser();
+      final results = <ParsedLine>[
+        ...p.feed('{"version":"v0.9","createSurface":{"surfaceId":"s",'
+            '"catalogId":"c"'),
+        ...p.flush(),
+      ];
+      expect(results.single.ok, isTrue);
+    });
+
+    test('文字列内の波括弧と改行で誤分割しない', () {
+      final p = JsonlStreamParser();
+      final results = <ParsedLine>[
+        ...p.feed('{"version":"v0.9","createSurface":'
+            '{"surfaceId":"s{１}","catalogId":"c}"}}\n'),
+        ...p.flush(),
+      ];
+      expect(results.single.ok, isTrue);
+    });
   });
 
   group('Mock → パーサ → ストア の統合', () {

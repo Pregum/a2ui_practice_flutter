@@ -17,11 +17,15 @@ import '../../core/llm/prompt/system_prompt.dart';
 import '../renderer/a2ui_renderer.dart';
 
 /// プリセットの要望（チップで素早く切替）。
+///
+/// [mockOnly] は台本つきの演出シナリオ（壊れたUIの注入や多段 compose フロー）。
+/// 実機の小型 LLM にメタな指示を投げると縮退ループに入るため Mock で実演する。
 class _Preset {
-  const _Preset(this.label, this.icon, this.prompt);
+  const _Preset(this.label, this.icon, this.prompt, {this.mockOnly = false});
   final String label;
   final IconData icon;
   final String prompt;
+  final bool mockOnly;
 }
 
 const List<_Preset> _presets = [
@@ -29,9 +33,12 @@ const List<_Preset> _presets = [
       '問い合わせ #4821（請求が二重）の対応画面を出して'),
   _Preset('解約の申し出', Icons.exit_to_app_outlined, '解約したいという問い合わせの対応画面を出して'),
   _Preset('ログイン障害', Icons.bug_report_outlined, 'ログインできない不具合の対応画面を出して'),
-  _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して'),
-  _Preset('タップ作文', Icons.touch_app_outlined, 'チャットの返信をタップで下書きしたい'),
-  _Preset('働きすぎ検知', Icons.self_improvement_outlined, '働きすぎを検知して休憩をうながして'),
+  _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して',
+      mockOnly: true),
+  _Preset('タップ作文', Icons.touch_app_outlined, 'チャットの返信をタップで下書きしたい',
+      mockOnly: true),
+  _Preset('働きすぎ検知', Icons.self_improvement_outlined, '働きすぎを検知して休憩をうながして',
+      mockOnly: true),
 ];
 
 /// 生成速度プリセット（progressive rendering の演出用）。
@@ -110,7 +117,8 @@ class _DemoScreenState extends State<DemoScreen> {
     if (llm is MockLlm) llm.delay = _speeds[_speedIndex].delay;
 
     try {
-      var prompt = overridePrompt ?? _input.text;
+      final original = overridePrompt ?? _input.text;
+      var prompt = original;
       for (var attempt = 0; attempt <= _maxRepairs; attempt++) {
         if (attempt == 0) {
           _store.addLog(LogKind.info, '▶ 生成開始（端末内LLM: ${_llm.name}）');
@@ -140,8 +148,8 @@ class _DemoScreenState extends State<DemoScreen> {
           _store.addLog(LogKind.error, '⚠ 上限到達。自己修正を打ち切りました');
           return;
         }
-        // repair プロンプトを次の入力にする
-        prompt = buildRepairPrompt(errors, surface.surfaceId);
+        // repair プロンプトを次の入力にする（元の要望も添える）
+        prompt = buildRepairPrompt(errors, surface.surfaceId, request: original);
         _store.addLog(LogKind.skip, '→ repair プロンプトを LLM に差し戻し');
       }
     } catch (e) {
@@ -155,13 +163,30 @@ class _DemoScreenState extends State<DemoScreen> {
   String get _systemPrompt =>
       _llm is FlutterGemmaLlm ? supportSystemPromptCompact : supportSystemPrompt;
 
+  /// 有効メッセージが出ないままこれだけ文字が流れたら暴走とみなす閾値。
+  /// （正常な A2UI メッセージ1行は長くても 1000 文字程度）
+  static const int _runawayChars = 2000;
+
   /// 1回ぶんの生成ストリームをパースして適用する。
   Future<void> _stream(String prompt) async {
     final parser = JsonlStreamParser();
     final stream = _llm.generate(system: _systemPrompt, user: prompt);
+    var sinceOk = 0; // 最後に有効メッセージを適用してからの文字数
+    final tail = StringBuffer(); // 暴走調査用（直近の生テキスト）
     await for (final chunk in stream) {
+      sinceOk += chunk.length;
+      if (tail.length < 600) tail.write(chunk);
       for (final line in parser.feed(chunk)) {
         _consume(line);
+        if (line.ok) sinceOk = 0;
+      }
+      // 暴走ガード: 小型LLMの縮退ループ（同語反復）で何分も待たないための保険。
+      // ループを抜けると購読がキャンセルされ、セッションは close される。
+      if (sinceOk > _runawayChars) {
+        _store.addLog(
+            LogKind.error, '⚠ 有効なメッセージが $_runawayChars 文字以上出ないため打ち切り');
+        debugPrint('A2UI-RUNAWAY(head): ${tail.toString()}');
+        return;
       }
     }
     for (final line in parser.flush()) {
@@ -171,9 +196,14 @@ class _DemoScreenState extends State<DemoScreen> {
 
   void _consume(ParsedLine line) {
     if (line.ok) {
+      if (line.note != null) {
+        _store.addLog(LogKind.info, '⚙ ${line.note}して適用');
+      }
       _store.apply(line.message!);
     } else {
       _store.addLog(LogKind.skip, 'skip: ${line.note}  «${line.raw}»');
+      // 実機調査用: 取りこぼした生テキストを logcat に全文出す。
+      debugPrint('A2UI-SKIP(${line.note}): ${line.raw}');
     }
   }
 
@@ -412,6 +442,12 @@ class _DemoScreenState extends State<DemoScreen> {
                       ? null
                       : () {
                           _input.text = p.prompt;
+                          // 演出シナリオは Mock で実演（実機LLMには不向き）。
+                          if (p.mockOnly && _llm is! MockLlm) {
+                            _useMock();
+                            _store.addLog(LogKind.info,
+                                'ℹ ${p.label} は台本シナリオのため Mock で実演（Gemma にはトグルで戻せます）');
+                          }
                           _generate();
                         },
                 ),
@@ -525,6 +561,22 @@ class _DemoScreenState extends State<DemoScreen> {
   }
 
   Widget _emptyState() {
+    // 生成中（特に実機LLMの自己修正中）は数十秒画面が空になるため、
+    // 固まって見えないよう進行中であることを明示する。
+    if (_generating) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('端末内LLM（${_llm.name}）が生成中…\n出力はストリームログに流れています',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, height: 1.5)),
+          ],
+        ),
+      );
+    }
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
