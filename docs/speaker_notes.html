@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<title>発表用コラム集 — オンデバイスLLM × A2UI</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --fg:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --pink:#f778ba; --green:#3fb950; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,'Hiragino Sans',sans-serif; line-height:1.85; margin:0; padding:2.5em 1.5em; }
+  main { max-width:880px; margin:0 auto; }
+  h1 { font-size:1.7em; border-bottom:2px solid var(--accent); padding-bottom:.4em; }
+  h2 { font-size:1.3em; color:var(--accent); margin-top:2.2em; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:.5em .8em; position:sticky; top:0; }
+  strong { color:#ffd866; }
+  code { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:.1em .35em; font-size:.9em; color:var(--pink); }
+  ul { padding-left:1.4em; } li { margin:.45em 0; }
+  blockquote { border-left:4px solid var(--green); margin:1em 0; padding:.3em 1em; color:var(--muted); background:var(--panel); border-radius:0 8px 8px 0; }
+  hr { border:none; border-top:1px solid var(--border); margin:2em 0; }
+  a { color:var(--accent); }
+</style></head><body><main><h1>発表用コラム集（スピーカーノート）</h1>
+<p>スライド1枚ごとに「話せる小ネタ・背景・想定問答」を貯めるファイル。
+スライド番号は <code>docs/slides.html</code> の表示番号（01〜23）に対応。
+質問をもらうたびに、該当スライドの節へコラムとして追記していく。</p>
+<blockquote>
+<p>進行・トラブル対応の段取りは <a href="demo_runbook.md">demo_runbook.md</a> 参照
+（ライブは「請求の問い合わせ」「働きすぎ検知」の2本、解約/ログイン障害はバックアップ、
+失敗時は 再タップ → アプリ再起動 → Mock 切替 → スライド実キャプチャ の4段構え）。</p>
+</blockquote>
+<hr />
+<h2>04 そもそも A2UI とは？</h2>
+<p><strong>コラム: A2UI の立ち位置</strong>
+- Google が公開したオープンプロジェクト（Apache 2.0）。公式サイトは a2ui.org、リポジトリは github.com/google/A2UI。CopilotKit などコミュニティの貢献も入っている。
+- 一言でいうと「<strong>エージェントの返事を、安全に・どのプラットフォームでも・操作可能な UI として描画するための共通フォーマット</strong>」。
+- ポイントは「実行コードを送らない」こと。エージェントが送るのは宣言的な JSON（コンポーネントの木＋データモデル）だけで、クライアントは<strong>自分が信頼するカタログ</strong>のウィジェットにしかマップしない。だから UI インジェクションや任意スクリプト実行のリスクを構造的に避けられる。
+- JSONL ベースでストリーミングに最適化されており、「エージェントが考えながら UI が組み上がっていく」progressive rendering が公式の売り。
+- 同じペイロードを Angular / React / Flutter / SwiftUI など各クライアントが自前の部品で描ける＝<strong>見た目の統制権はアプリ側</strong>に残る。
+- 本デモは v0.9 を Flutter で自前実装（パーサ→バリデータ→レンダラー）。プロトコルが軽量なので、フルスタックのSDKを待たずに自分で実装できるサイズ感、というのも伝えたいポイント。</p>
+<hr />
+<h2>08 構造：フラットな配列が木になり、画面になる</h2>
+<p><strong>コラム: なぜ「フラット配列＋id参照」なのか</strong>
+- 普通に考えると UI はネストした JSON で書きたくなるが、A2UI はあえて<strong>フラットな配列</strong>にして親子を id 参照（隣接リスト）で表す。
+- 理由は2つ。①<strong>ストリーミングと相性がいい</strong>: 1コンポーネント＝1要素が独立して届くので、全体の閉じ括弧を待たずに root から描画を始められる（progressive rendering の土台）。②<strong>小型LLMでも壊れにくい</strong>: 深いネストは閉じ括弧の対応を崩しやすい。実際このデモでも Gemma E2B は <code>}]}</code> を <code>]}}</code> に転置するクセがあり、フラット構造だから行単位の自動修復で救えた。
+- レンダラー側は <code>Map&lt;String, Component&gt;</code>（id→component）を引きながら root から再帰して木を再構築する。循環参照は visited 集合で検出（バリデーション項目のひとつ）。</p>
+<p><strong>コラム: JSON Pointer（<code>{"path": "/reply/draft"}</code>）の意図</strong>
+- prop に直接値を書かず「データモデル上の住所」を書く。実データは <code>updateDataModel</code> という別メッセージで届く。
+- これで <strong>UIの構造とデータが分離</strong>される。構造は据え置きで <code>updateDataModel</code> だけ流せば画面の文言・値が差し替わる（再生成不要＝速い・ちらつかない）。
+- 逆方向もある: ユーザーが TextField を編集すると dataModel に<strong>書き戻る</strong>（双方向バインド）。「LLMの出力が、読むだけの文章ではなく操作できるUIになる」の技術的な正体はここ。
+- デモで見せる場合: 請求の問い合わせ画面で ReplyBox に下書きが「あとから」入るのがまさにこれ。</p>
+<hr />
+<h2>12 LLMレイヤ（差替え可能）</h2>
+<p><strong>コラム: temp 0.2 / topK 1（低ランダム設定）とは何か</strong>
+- LLM は次の1トークンを「確率分布から選ぶ」ことを繰り返して文章を作る。その選び方を制御するのがこの2つ。
+- <strong>temperature（温度）</strong>: 分布の尖り具合。1.0 が素の分布で、下げるほど「最有力候補をほぼ必ず選ぶ」尖った分布になり、上げるほど下位候補も選ばれて多様（=創造的だが不安定）になる。0.2 はかなり保守的な設定。
+- <strong>topK</strong>: 候補を「確率上位 K 個」に足切りしてから選ぶ。topK=40 なら上位40個から抽選。<strong>topK=1 は常に1位だけを選ぶ＝greedy decoding</strong> で、実質ランダム性ゼロ。
+- つまりこのデモは「<strong>毎回ほぼ同じ、最も確からしい出力</strong>」に全振りした設定。A2UI は1文字でも構造が壊れると描画できないので、文章生成で欲しい「言い回しの多様性」より構文の再現性を優先した。
+- 補足: topK=1 の時点で決定的なので、temperature はほぼ効かない（保険で低値にしてある）。
+- 副作用も話せる: greedy は<strong>同語反復ループ（縮退）に弱い</strong>。多様性ゼロなので一度ループに入ると抜けられない。これがスライド17の暴走ガードが要る理由のひとつ。逆に「壊れるときは毎回同じように壊れる」ので、再現性がありデバッグは速かった。
+- 想定問答「temperature 0 じゃだめ？」→ 実装上 topK=1 が同じ意味になる。「JSON を保証したいなら制約付きデコード（grammar/GBNF）では？」→ その通りで設計時の理想形。LiteRT-LM 経路では未対応のため、検証→自己修正ループで担保している。</p>
+<hr />
+<h2>13 オンデバイスLLMの選定</h2>
+<p><strong>コラム: 選定の実際の流れ</strong>
+- 設計段階の候補は Gemma 3n E2B/E4B と Qwen2.5 0.5B/1.5B Instruct（design.md 当時）。Qwen は最軽量だが、A2UI のような厳密な構造化 JSON と日本語のUI文言の両立に不安があり、flutter_gemma での実績も薄く机上評価で見送り。
+- 最初の統合は Gemma 3n E2B で実装 → レビューで Gemma 4 E2B に切替。決め手は ①litert-community 配布で<strong>認証不要</strong>（HF トークン配布の運用が消える）②LiteRT-LM（.litertlm）+ GPU で Pixel 6a でも実用速度 ③gemma4 専用 ModelType でネイティブ function-calling トークン対応。
+- 「E2B」は MatFormer アーキテクチャの「実効 2B」の意。E4B（約4.4GB）は品質が上がるが、Pixel 6a の RAM 6GB ではロード時間・生成速度ともデモに耐えないと判断。</p>
+<p><strong>コラム: E2B/E4B の「E」の正体（想定問答: embedded の略？）</strong>
+- 「E = <strong>Effective</strong>（実効）」の略。embedded ではない。E2B は「実効2Bパラメータ」、E4B は「実効4B」。
+- 総パラメータ数はもっと多い（E2B ≈ 生5B、E4B ≈ 生8B）。それでも「実効2B/4B」と呼べるのは2つの仕組みのため:
+  - <strong>Per-Layer Embeddings (PLE)</strong>: 各デコーダ層がトークンごとの小さな埋め込み表を持つ。表自体は大きいが「参照するだけ」なので GPU/アクセラレータの高速メモリに常駐させる必要がなく、実効フットプリントに数えない。
+  - <strong>MatFormer（Matryoshka Transformer）</strong>: 大きいモデルの中に小さいモデルが入れ子で同時学習される。E2B は E4B の中に最適化された「サブモデル」。
+- つまり「5Bモデルの品質の一部を、2B並みのメモリ・速度で動かす」ためのオンデバイス特化設計。E2B はメモリ約2GB級の端末でも動く想定。
+- 出典: Google AI for Developers(ai.google.dev/gemma)、Google Developers Blog(Gemma 3n developer guide)。命名は 3n 世代から踏襲。
+- 量子化は 4bit。温度 0.2 / topK 1 の低ランダム設定で構造の安定を優先（その代わり壊れるときは毎回同じように壊れる＝デバッグはしやすい）。
+- 想定問答「もっと大きいモデルなら自己修正いらないのでは？」→ その通りだが、このデモの主張は「<strong>小型でも 検証→自己修正 のループで実用になる</strong>」。端末を選ばないことに価値がある。</p>
+<hr />
+<h2>17 実際に遭遇した罠：2回目の生成から壊れる</h2>
+<p><strong>コラム: 発表当日の朝に踏んだバグの裏話</strong>
+- 前日まで動いていたデモが当日朝に全滅。1回目の生成は必ず成功するのに、2回目から「o o o o…」「bolbolbol…」のような縮退ループに入る。
+- topK=1（greedy）にしていたおかげで<strong>毎回同じように壊れる</strong>＝再現性があり、切り分けが早かった。「1回目に成功したプロンプトをもう一度流すと壊れる」ことから、プロンプトではなく実行順序の問題と特定。
+- flutter_gemma 0.16.5（前日リリース）の changelog に「KV-cache bleed between sequential chats を修正」とあり当たりに見えたが、上げても完治せず。最終的に「生成のたびにエンジンごと作り直す」力技で回避。モデルファイルは OS のページキャッシュに乗っているので再作成は5〜10秒で済む。
+- 教訓: ①小型モデルの暴走は「ガード（2000字打ち切り）＋生出力ログ」を仕込んでおくと調査が速い ②オンデバイス推論はランタイムがまだ若く、こういう罠は普通にある。発表デモは「確実に動く最小構成」に絞るのが正解。</p>
+<hr />
+<h2>19 嬉しいUXの正体：4つの「〜ない」</h2>
+<p><strong>コラム: これは A2UI のメリット？ オンデバイスのメリット？（質問への整理）</strong>
+- 答えは「<strong>両方の掛け算</strong>」。スライドの第3列「どこから来るか」で帰属を明示した。
+  - <strong>探さない</strong> = A2UI×LLM。文脈に合わせて次の操作が並んだUIを都度生成できるから。
+  - <strong>打ち込まない</strong> = A2UI。双方向バインド（dataModel）でUIが「操作できる」から。クラウドLLMでも成立する。
+  - <strong>待たされない</strong> = A2UI×オンデバイスの合わせ技。JSONLストリーミング（A2UI設計）×ネットワーク往復ゼロ（端末内）。
+  - <strong>送られない</strong> = 純粋にオンデバイス。A2UIは無関係。
+- 話し方の例: 「打ち込まないは A2UI の手柄、送られないはオンデバイスの手柄。全部同時に効くのがこのデモの構成です」。</p>
+<hr />
+<h2>22 実機デモ（Pixel 6a・オフライン）</h2>
+<p><strong>コラム: 実測値の根拠</strong>
+- スライドの3枚はすべて発表当日に Pixel 6a（release ビルド・オフライン）で生成し、バリデーション OK まで通った実キャプチャ。
+- 実測: 初回トークン約2秒 / 1画面25〜35秒 / 連続生成はエンジン再初期化で+5〜10秒。
+- デモ中に「エンジン再初期化中」と表示されるのはスライド17の対策が動いているところ。</p>
+<hr />
+<p>（以降、質問をもらい次第このファイルにコラムを追記）</p></main></body></html>
