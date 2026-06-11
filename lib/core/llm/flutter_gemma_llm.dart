@@ -34,6 +34,7 @@ class FlutterGemmaLlm implements LlmBackend {
 
   InferenceModel? _model;
   bool _ready = false;
+  bool _usedOnce = false;
 
   /// 0..100 のダウンロード進捗（UI 表示用）。
   final ValueNotifier<double> downloadProgress = ValueNotifier<double>(0);
@@ -85,26 +86,49 @@ class FlutterGemmaLlm implements LlmBackend {
     phase.value = '準備完了';
   }
 
+  /// エンジンを作り直して「1回目」の状態に戻す。
+  ///
+  /// LiteRT-LM（flutter_gemma 0.16.5 時点）はエンジン作成後の最初のセッション
+  /// だけが正常で、2セッション目以降は出力が最初のトークンから縮退ループに
+  /// なる（Pixel 6a 実機で再現。プロンプト内容には依存しない）。
+  /// モデルファイルは OS のページキャッシュに乗っているため再作成は数秒で済む。
+  Future<void> _recreateEngine() async {
+    phase.value = 'エンジン再初期化中';
+    await _model?.close();
+    _model = await FlutterGemma.getActiveModel(
+      maxTokens: maxTokens,
+      preferredBackend: PreferredBackend.gpu,
+    );
+    phase.value = '準備完了';
+  }
+
   @override
   Stream<String> generate({
     required String system,
     required String user,
   }) async* {
     if (_model == null) await warmup();
+    if (_usedOnce) await _recreateEngine();
+    _usedOnce = true;
     final session = await _model!.createSession(
       temperature: temperature,
       topK: topK,
       systemInstruction: system,
     );
+    var completed = false;
     try {
       await session.addQueryChunk(Message.text(text: user, isUser: true));
       yield* session.getResponseAsync();
+      completed = true;
     } finally {
-      // 途中キャンセル（暴走ガード等）でも native の decode を確実に止める。
-      // close() は会話を解放するだけで生成中のターンは止めないため明示する。
-      try {
-        await session.stopGeneration();
-      } catch (_) {/* 生成完了後の呼び出しは失敗してよい */}
+      // 途中キャンセル（暴走ガード等）の時だけ native の decode を明示停止する。
+      // 正常完了後に stopGeneration() を呼ぶと engine 側に CancelProcess が残り、
+      // 以降のセッションが最初のトークンから縮退ループになる（実機で確認）。
+      if (!completed) {
+        try {
+          await session.stopGeneration();
+        } catch (_) {/* 停止済みなら失敗してよい */}
+      }
       await session.close();
     }
   }

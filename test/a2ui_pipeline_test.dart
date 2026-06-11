@@ -103,6 +103,32 @@ void main() {
     });
   });
 
+  group('compactSystemPromptFor のシナリオ振り分け', () {
+    test('要望ごとに該当する few-shot 1例だけが入る', () {
+      expect(compactSystemPromptFor('請求が二重に引かれた'), contains('請求額が二重'));
+      expect(compactSystemPromptFor('解約したい'), contains('解約の申し出'));
+      expect(compactSystemPromptFor('ログインできない不具合'), contains('ログイン不可'));
+      expect(compactSystemPromptFor('チャットの返信をタップで下書きしたい'),
+          contains('compose:apologize'));
+      expect(compactSystemPromptFor('働きすぎを検知して休憩をうながして'), contains('RestTimer'));
+      // 1例だけ＝他シナリオの例は混ざらない（token 節約）
+      expect(compactSystemPromptFor('請求が二重に引かれた'), isNot(contains('解約の申し出')));
+      expect(compactSystemPromptFor('請求が二重に引かれた'), isNot(contains('RestTimer')));
+    });
+
+    test('compose/flow イベントは下書き/送信の例に振り分ける', () {
+      expect(compactSystemPromptFor('compose:polite'), contains('flow:send'));
+      expect(compactSystemPromptFor('flow:send'), contains('Image'));
+    });
+
+    test('自己修正デモは初回=壊れた例 / repair=直した例', () {
+      const req = '自己修正デモ：壊れたUIを生成して';
+      expect(compactSystemPromptFor(req), contains('Callout'));
+      expect(compactSystemPromptFor(req, repair: true), isNot(contains('Callout')));
+      expect(compactSystemPromptFor(req, repair: true), contains('QuickActions'));
+    });
+  });
+
   group('Mock → パーサ → ストア の統合', () {
     test('サポートコンソールが描画可能な状態まで組み上がる', () async {
       final store = SurfaceStore();

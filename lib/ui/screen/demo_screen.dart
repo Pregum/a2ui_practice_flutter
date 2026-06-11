@@ -17,15 +17,11 @@ import '../../core/llm/prompt/system_prompt.dart';
 import '../renderer/a2ui_renderer.dart';
 
 /// プリセットの要望（チップで素早く切替）。
-///
-/// [mockOnly] は台本つきの演出シナリオ（壊れたUIの注入や多段 compose フロー）。
-/// 実機の小型 LLM にメタな指示を投げると縮退ループに入るため Mock で実演する。
 class _Preset {
-  const _Preset(this.label, this.icon, this.prompt, {this.mockOnly = false});
+  const _Preset(this.label, this.icon, this.prompt);
   final String label;
   final IconData icon;
   final String prompt;
-  final bool mockOnly;
 }
 
 const List<_Preset> _presets = [
@@ -33,12 +29,9 @@ const List<_Preset> _presets = [
       '問い合わせ #4821（請求が二重）の対応画面を出して'),
   _Preset('解約の申し出', Icons.exit_to_app_outlined, '解約したいという問い合わせの対応画面を出して'),
   _Preset('ログイン障害', Icons.bug_report_outlined, 'ログインできない不具合の対応画面を出して'),
-  _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して',
-      mockOnly: true),
-  _Preset('タップ作文', Icons.touch_app_outlined, 'チャットの返信をタップで下書きしたい',
-      mockOnly: true),
-  _Preset('働きすぎ検知', Icons.self_improvement_outlined, '働きすぎを検知して休憩をうながして',
-      mockOnly: true),
+  _Preset('自己修正デモ', Icons.auto_fix_high_outlined, '自己修正デモ：壊れたUIを生成して'),
+  _Preset('タップ作文', Icons.touch_app_outlined, 'チャットの返信をタップで下書きしたい'),
+  _Preset('働きすぎ検知', Icons.self_improvement_outlined, '働きすぎを検知して休憩をうながして'),
 ];
 
 /// 生成速度プリセット（progressive rendering の演出用）。
@@ -127,7 +120,8 @@ class _DemoScreenState extends State<DemoScreen> {
           _store.addLog(LogKind.info, '↻ 自己修正 試行 $attempt / $_maxRepairs');
         }
 
-        await _stream(prompt);
+        await _stream(prompt,
+            system: _systemPromptFor(original, repair: attempt > 0));
 
         // 検証
         final surface = _store.active;
@@ -159,18 +153,23 @@ class _DemoScreenState extends State<DemoScreen> {
     }
   }
 
-  /// バックエンドに応じたシステムプロンプト（小型 Gemma は簡約版で安定化）。
-  String get _systemPrompt =>
-      _llm is FlutterGemmaLlm ? supportSystemPromptCompact : supportSystemPrompt;
+  /// バックエンドに応じたシステムプロンプト。
+  ///
+  /// 小型 Gemma には「元の要望に該当するシナリオの few-shot 1例だけ」を
+  /// 含む簡約版を使い、prefill トークンを抑える。repair 時も元要望で振り分け。
+  String _systemPromptFor(String original, {required bool repair}) =>
+      _llm is FlutterGemmaLlm
+          ? compactSystemPromptFor(original, repair: repair)
+          : supportSystemPrompt;
 
   /// 有効メッセージが出ないままこれだけ文字が流れたら暴走とみなす閾値。
   /// （正常な A2UI メッセージ1行は長くても 1000 文字程度）
   static const int _runawayChars = 2000;
 
   /// 1回ぶんの生成ストリームをパースして適用する。
-  Future<void> _stream(String prompt) async {
+  Future<void> _stream(String prompt, {required String system}) async {
     final parser = JsonlStreamParser();
-    final stream = _llm.generate(system: _systemPrompt, user: prompt);
+    final stream = _llm.generate(system: system, user: prompt);
     var sinceOk = 0; // 最後に有効メッセージを適用してからの文字数
     final tail = StringBuffer(); // 暴走調査用（直近の生テキスト）
     await for (final chunk in stream) {
@@ -442,12 +441,6 @@ class _DemoScreenState extends State<DemoScreen> {
                       ? null
                       : () {
                           _input.text = p.prompt;
-                          // 演出シナリオは Mock で実演（実機LLMには不向き）。
-                          if (p.mockOnly && _llm is! MockLlm) {
-                            _useMock();
-                            _store.addLog(LogKind.info,
-                                'ℹ ${p.label} は台本シナリオのため Mock で実演（Gemma にはトグルで戻せます）');
-                          }
                           _generate();
                         },
                 ),

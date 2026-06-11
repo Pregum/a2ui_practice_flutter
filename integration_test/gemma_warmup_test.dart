@@ -30,7 +30,7 @@ void main() {
 
       final buf = StringBuffer();
       await for (final t in gemma.generate(
-        system: supportSystemPromptCompact,
+        system: compactSystemPromptFor('請求の問い合わせ #4821 の対応画面を出して'),
         user: '請求の問い合わせ #4821 の対応画面を出して',
       )) {
         buf.write(t);

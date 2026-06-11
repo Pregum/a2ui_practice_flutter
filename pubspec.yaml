@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # オンデバイス LLM（Gemma 3n / Gemma 4 等）。実機推論バックエンドに使用。
-  flutter_gemma: ^0.16.4
+  flutter_gemma: ^0.16.5
 
   # 外部 files ディレクトリの取得＆作成（adb push したモデルの fromFile 読込に必要）。
   path_provider: ^2.1.5
