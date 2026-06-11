@@ -228,26 +228,32 @@
 
   <!-- 8 隣接リスト -->
   <section class="slide">
-    <h2><span class="num">08</span>構造：隣接リスト × JSON Pointer</h2>
+    <h2><span class="num">08</span>構造：フラットな配列が木になり、画面になる</h2>
     <div class="cols">
       <div>
-        <h3 class="accent">親子は id 参照（隣接リスト）</h3>
-        <pre>[{<span class="k">"id"</span>:<span class="s">"root"</span>,<span class="k">"component"</span>:<span class="s">"Card"</span>,<span class="k">"child"</span>:<span class="s">"col"</span>},
- {<span class="k">"id"</span>:<span class="s">"col"</span>,<span class="k">"component"</span>:<span class="s">"Column"</span>,
-  <span class="k">"children"</span>:[<span class="s">"a"</span>,<span class="s">"b"</span>]}]</pre>
-        <p class="muted">フラット配列 → renderer が id で木を再構築</p>
+        <h3 class="accent">① LLM が吐くのはフラットな配列（請求デモの実物）</h3>
+        <pre>[{<span class="k">"id"</span>:<span class="s">"root"</span>, <span class="k">"component"</span>:<span class="s">"Column"</span>, <span class="k">"children"</span>:[<span class="s">"h"</span>,<span class="s">"r"</span>]},
+ {<span class="k">"id"</span>:<span class="s">"h"</span>, <span class="k">"component"</span>:<span class="s">"InquiryHeader"</span>,
+  <span class="k">"customer"</span>:<span class="s">"田中"</span>, <span class="k">"priority"</span>:<span class="s">"high"</span>},
+ {<span class="k">"id"</span>:<span class="s">"r"</span>, <span class="k">"component"</span>:<span class="s">"ReplyBox"</span>,
+  <span class="k">"value"</span>:{<span class="k">"path"</span>:<span class="s">"/reply/draft"</span>}}]</pre>
+        <p class="muted">ネストなし＝1行ずつ独立して届く（ストリーミング向き・小型LLMでも壊れにくい）</p>
       </div>
       <div>
-        <h3 class="green">動的値は JSON Pointer</h3>
-        <pre><span class="c">// propの中</span>
-<span class="k">"value"</span>:{<span class="k">"path"</span>:<span class="s">"/edit/style"</span>}
-
-<span class="c">// 別送される実データ</span>
-updateDataModel
-  path=<span class="s">"/edit"</span> value={...}</pre>
-        <p class="muted">"path"1キーのMap → dataModelから解決</p>
+        <h3 class="green">② renderer が id を辿って木に → Flutter へ</h3>
+        <pre>root <span class="c">Column</span>      → Column(children:[
+ ├ h <span class="c">InquiryHeader</span> →  InquiryHeader(田中, 高),
+ └ r <span class="c">ReplyBox</span>    →  TextField(...),
+])</pre>
+        <h3 class="green" style="margin-top:.6em">③ 値は JSON Pointer で「あとから」入る</h3>
+        <pre><span class="c">// 別メッセージで実データが届く</span>
+updateDataModel {<span class="k">"path"</span>:<span class="s">"/reply/draft"</span>,
+  <span class="k">"value"</span>:<span class="s">"お待たせしております。…"</span>}
+<span class="c">// → ReplyBox の TextField に文章が入る
+// ユーザーが編集すると dataModel に書き戻る（双方向）</span></pre>
       </div>
     </div>
+    <p class="lead">UIの<strong>構造</strong>と<strong>データ</strong>を分離 → 構造はそのまま、<code class="accent">updateDataModel</code> だけで画面の値が差し替わる。</p>
   </section>
 
   <!-- 9 対応表 -->
