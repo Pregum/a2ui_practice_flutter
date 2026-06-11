@@ -56,6 +56,14 @@
 - 設計段階の候補は Gemma 3n E2B/E4B と Qwen2.5 0.5B/1.5B Instruct（design.md 当時）。Qwen は最軽量だが、A2UI のような厳密な構造化 JSON と日本語のUI文言の両立に不安があり、flutter_gemma での実績も薄く机上評価で見送り。
 - 最初の統合は Gemma 3n E2B で実装 → レビューで Gemma 4 E2B に切替。決め手は ①litert-community 配布で**認証不要**（HF トークン配布の運用が消える）②LiteRT-LM（.litertlm）+ GPU で Pixel 6a でも実用速度 ③gemma4 専用 ModelType でネイティブ function-calling トークン対応。
 - 「E2B」は MatFormer アーキテクチャの「実効 2B」の意。E4B（約4.4GB）は品質が上がるが、Pixel 6a の RAM 6GB ではロード時間・生成速度ともデモに耐えないと判断。
+
+**コラム: E2B/E4B の「E」の正体（想定問答: embedded の略？）**
+- 「E = **Effective**（実効）」の略。embedded ではない。E2B は「実効2Bパラメータ」、E4B は「実効4B」。
+- 総パラメータ数はもっと多い（E2B ≈ 生5B、E4B ≈ 生8B）。それでも「実効2B/4B」と呼べるのは2つの仕組みのため:
+  - **Per-Layer Embeddings (PLE)**: 各デコーダ層がトークンごとの小さな埋め込み表を持つ。表自体は大きいが「参照するだけ」なので GPU/アクセラレータの高速メモリに常駐させる必要がなく、実効フットプリントに数えない。
+  - **MatFormer（Matryoshka Transformer）**: 大きいモデルの中に小さいモデルが入れ子で同時学習される。E2B は E4B の中に最適化された「サブモデル」。
+- つまり「5Bモデルの品質の一部を、2B並みのメモリ・速度で動かす」ためのオンデバイス特化設計。E2B はメモリ約2GB級の端末でも動く想定。
+- 出典: Google AI for Developers(ai.google.dev/gemma)、Google Developers Blog(Gemma 3n developer guide)。命名は 3n 世代から踏襲。
 - 量子化は 4bit。温度 0.2 / topK 1 の低ランダム設定で構造の安定を優先（その代わり壊れるときは毎回同じように壊れる＝デバッグはしやすい）。
 - 想定問答「もっと大きいモデルなら自己修正いらないのでは？」→ その通りだが、このデモの主張は「**小型でも 検証→自己修正 のループで実用になる**」。端末を選ばないことに価値がある。
 
