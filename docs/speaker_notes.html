@@ -15,7 +15,7 @@
   a { color:var(--accent); }
 </style></head><body><main><h1>発表用コラム集（スピーカーノート）</h1>
 <p>スライド1枚ごとに「話せる小ネタ・背景・想定問答」を貯めるファイル。
-スライド番号は <code>docs/slides.html</code> の表示番号（01〜27）に対応。
+スライド番号は <code>docs/slides.html</code> の表示番号（01〜30）に対応。
 質問をもらうたびに、該当スライドの節へコラムとして追記していく。</p>
 <blockquote>
 <p>進行・トラブル対応の段取りは <a href="demo_runbook.md">demo_runbook.md</a> 参照
@@ -30,14 +30,16 @@
 - ポイントは「実行コードを送らない」こと。エージェントが送るのは宣言的な JSON（コンポーネントの木＋データモデル）だけで、クライアントは<strong>自分が信頼するカタログ</strong>のウィジェットにしかマップしない。だから UI インジェクションや任意スクリプト実行のリスクを構造的に避けられる。
 - JSONL ベースでストリーミングに最適化されており、「エージェントが考えながら UI が組み上がっていく」progressive rendering が公式の売り。
 - 同じペイロードを Angular / React / Flutter / SwiftUI など各クライアントが自前の部品で描ける＝<strong>見た目の統制権はアプリ側</strong>に残る。
-- 本デモは v0.9 を Flutter で自前実装（パーサ→バリデータ→レンダラー）。プロトコルが軽量なので、フルスタックのSDKを待たずに自分で実装できるサイズ感、というのも伝えたいポイント。</p>
+- 本デモは v0.9 を Flutter で自前実装（パーサ→バリデータ→レンダラー）。プロトコルが軽量なので、フルスタックのSDKを待たずに自分で実装できるサイズ感、というのも伝えたいポイント。
+- <strong>出典</strong>: 発表ブログ <a href="https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/">https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/</a> ／ 仕様リポジトリ <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a> ／ 公式サイト <a href="https://a2ui.org">https://a2ui.org</a>（「declarative data format, not executable code」「trusted catalog」の記述はリポジトリ README より）</p>
 <hr />
 <h2>05 A2UI 以前 / 以後：何が変わったのか</h2>
 <p><strong>コラム: 「MCP と同じ構図」という整理（質問への裏取り済み）</strong>
 - 「規格化で車輪の再発明が消えた。MCP のようにプロトコルを決めたことが大きい」という理解は<strong>公式の言い分とも一致</strong>。公式リポジトリも「agents describe UI intent in JSON; clients map this to native components — eliminates the need for custom implementations per platform」と説明している。
 - 補足するなら変化は2軸ある: ①<strong>相互運用</strong>（N個のエージェント×M個のクライアントが、N×M の自作実装から N+M に減る）②<strong>安全モデルの標準化</strong>（「データでありコードではない」＋信頼カタログが規格に内蔵。以前は HTML/JSX 直描画の XSS リスクを各自で塞いでいた）。
 - プロトコルスタックの整理: <strong>MCP</strong>＝エージェント↔ツール/データ、<strong>A2A</strong>＝エージェント↔エージェント、<strong>AG-UI</strong>＝フロントエンド↔エージェントの通信路、<strong>A2UI</strong>＝その上を流れる「UI の中身」の記述形式。A2UI は「最後のピース（画面）」を埋めた。
-- 以前の方式の具体例: CopilotKit の旧方式は「Components as Tools」（コンポーネント＝ツール呼び出し）で、画面ごとにツール定義が必要だった。A2UI では例をプロンプトに注入し、エージェントが JSON を自由に組み立てる方式に変わった。</p>
+- 以前の方式の具体例: CopilotKit の旧方式は「Components as Tools」（コンポーネント＝ツール呼び出し）で、画面ごとにツール定義が必要だった。A2UI では例をプロンプトに注入し、エージェントが JSON を自由に組み立てる方式に変わった。
+- <strong>出典</strong>: 「eliminates the need for custom implementations per platform」は <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a>（README）／「Components as Tools」との比較は <a href="https://docs.copilotkit.ai/a2a/generative-ui/declarative-a2ui">https://docs.copilotkit.ai/a2a/generative-ui/declarative-a2ui</a> ／ A2A・AG-UI との役割分担も同ページに記載</p>
 <hr />
 <h2>06 A2UI のエコシステムと参考資料</h2>
 <p><strong>コラム: リンク集（スライドの出典）</strong>
@@ -46,15 +48,37 @@
 - レンダラー: Lit（quickstart の主役）/ Angular / React / Web Core。Flutter は GenUI SDK。Jetpack Compose / SwiftUI は計画中。
 - 転送路: A2A と AG-UI（CopilotKit）。REST は計画中。
 - A2UI Composer（a2ui-composer.ag-ui.com）: ブラウザで A2UI を生成・プレビューできるプレイグラウンド。/theater?scenario=restaurant-finder にシナリオデモがあり、会場のネットが生きていれば「公式側の動くA2UI」も見せられる。
-- CopilotKit 連携: Zod でコンポーネント schema を定義すると、説明文がエージェントのプロンプトに自動注入される（agent-aware components）。型検証も効く。</p>
+- CopilotKit 連携: Zod でコンポーネント schema を定義すると、説明文がエージェントのプロンプトに自動注入される（agent-aware components）。型検証も効く。
+- <strong>出典</strong>: quickstart・バージョン表（v0.9.1 current / v1.0 Candidate） <a href="https://a2ui.org/quickstart/">https://a2ui.org/quickstart/</a> ／ レンダラーと転送路 <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a> ／ 任意エージェントフレームワーク統合 <a href="https://github.com/a2ui-project/a2ui/blob/main/docs/guides/a2ui-with-any-agent-framework.md">https://github.com/a2ui-project/a2ui/blob/main/docs/guides/a2ui-with-any-agent-framework.md</a> ／ Composer <a href="https://a2ui-composer.ag-ui.com">https://a2ui-composer.ag-ui.com</a>（シナリオデモ <a href="https://a2ui-composer.ag-ui.com/theater?scenario=restaurant-finder">https://a2ui-composer.ag-ui.com/theater?scenario=restaurant-finder</a>）</p>
 <hr />
-<h2>10 A2UI の概念 ⇄ 本実装の対応図</h2>
+<h2>10 A2UI の基本概念 ①：Surface とカタログ</h2>
+<p><strong>コラム: 概念の補足</strong>
+- Surface は「ウィンドウ」や「カード」に相当する描画先の単位。エージェントが複数持てるので、「前の画面を残したまま新しい画面を出す」「多段フローで差し替える」が表現できる。本デモのタップ作文は surface の差し替えで進む。
+- カタログは A2UI の安全性の核。XSS のように「出力がそのまま実行される」事故を構造的に防ぐ。「カタログ＝API の許可リスト」と説明すると伝わりやすい。
+- 独自カタログにした瞬間に相互運用性は下がる（そのカタログを知らないクライアントには描けない）。標準カタログとのバランスはスライド25（実務の懸念）につながる話。
+- <strong>出典</strong>: createSurface / catalogId / カタログの信頼境界は v0.9 仕様 <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a> ／ <a href="https://a2ui.org/quickstart/">https://a2ui.org/quickstart/</a></p>
+<hr />
+<h2>11 A2UI の基本概念 ②：データモデルとイベント</h2>
+<p><strong>コラム: 概念の補足</strong>
+- データモデルは surface ごとの JSON ツリー。コンポーネントが「住所（JSON Pointer）」で参照する間接参照モデル。値の更新は updateDataModel だけで済み、UI 構造の再送が不要。
+- イベントは「操作の結果をエージェントに還す」チャネル。これがあるから A2UI は単方向の描画フォーマットではなく「対話のループ」になる。本デモの compose:/flow: イベント → 次画面生成がその実装例。
+- 双方向バインドの説明には「Excel のセル参照」の比喩が使える: セル（dataModel）を書き換えれば参照元の表示が変わり、フォームに打ち込めばセルが変わる。
+- <strong>出典</strong>: updateDataModel / JSON Pointer / 双方向バインドは v0.9 仕様 <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a>（docs/ 配下のデータモデル仕様）</p>
+<hr />
+<h2>12 A2UI の概念 ⇄ 本実装の対応図</h2>
 <p><strong>コラム: 対応図の話しどころ</strong>
 - 「仕様の概念がほぼ1対1でクラスになっている」＝プロトコルが小さく素直な証拠。全体で Dart 約20ファイル。
 - 仕様外の独自拡張は「検証→自己修正ループ」だけ。これは小型LLM（実効2B）でも実用にするための工夫で、クラウドの大きいモデルなら不要になる可能性が高い。
-- 質問が来たら: パーサの「閉じ括弧の自動修復」も独自（Gemma E2B が }]} を ]}} に転置するクセへの対処）。仕様としては純粋な JSONL。</p>
+- 質問が来たら: パーサの「閉じ括弧の自動修復」も独自（Gemma E2B が }]} を ]}} に転置するクセへの対処）。仕様としては純粋な JSONL。
+- <strong>出典</strong>: 4種メッセージ・コンポーネント形式・データモデルの定義は v0.9 仕様 <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a>（docs/ 配下）と <a href="https://a2ui.org/quickstart/">https://a2ui.org/quickstart/</a>（v0.8→v0.9 の形式変更の記載あり）</p>
 <hr />
-<h2>11 構造：フラットな配列が木になり、画面になる</h2>
+<h2>13 シーケンス：要望から描画・自己修正まで</h2>
+<p><strong>コラム: 図の読みどころ</strong>
+- 速さの肝は2つ。①検証を<strong>ストリーム終了後</strong>に回し、描画自体は root 到着の瞬間に始めること（待ち時間が「組み上がる演出」になる）。②エンジン再作成（5〜10秒）は②の中に隠れており、ユーザーには「考え始めるまでの間」に見えること。
+- repair は「同じ経路をもう一周」するだけで、特別な機構がない。エラー一覧＋元の要望を渡して再生成するのみ（最大2回）。
+- 図の⑤（notify → 再描画）が Flutter 的には <code>ChangeNotifier</code> + <code>ListenableBuilder</code>。状態管理を依存ゼロで済ませている話につなげられる。</p>
+<hr />
+<h2>14 構造：フラットな配列が木になり、画面になる</h2>
 <p><strong>コラム: なぜ「フラット配列＋id参照」なのか</strong>
 - 普通に考えると UI はネストした JSON で書きたくなるが、A2UI はあえて<strong>フラットな配列</strong>にして親子を id 参照（隣接リスト）で表す。
 - 理由は2つ。①<strong>ストリーミングと相性がいい</strong>: 1コンポーネント＝1要素が独立して届くので、全体の閉じ括弧を待たずに root から描画を始められる（progressive rendering の土台）。②<strong>小型LLMでも壊れにくい</strong>: 深いネストは閉じ括弧の対応を崩しやすい。実際このデモでも Gemma E2B は <code>}]}</code> を <code>]}}</code> に転置するクセがあり、フラット構造だから行単位の自動修復で救えた。
@@ -63,19 +87,20 @@
 - prop に直接値を書かず「データモデル上の住所」を書く。実データは <code>updateDataModel</code> という別メッセージで届く。
 - これで <strong>UIの構造とデータが分離</strong>される。構造は据え置きで <code>updateDataModel</code> だけ流せば画面の文言・値が差し替わる（再生成不要＝速い・ちらつかない）。
 - 逆方向もある: ユーザーが TextField を編集すると dataModel に<strong>書き戻る</strong>（双方向バインド）。「LLMの出力が、読むだけの文章ではなく操作できるUIになる」の技術的な正体はここ。
-- デモで見せる場合: 請求の問い合わせ画面で ReplyBox に下書きが「あとから」入るのがまさにこれ。</p>
+- デモで見せる場合: 請求の問い合わせ画面で ReplyBox に下書きが「あとから」入るのがまさにこれ。
+- <strong>出典</strong>: フラット形式（v0.9 で「flatter component format」に変更）は <a href="https://a2ui.org/quickstart/">https://a2ui.org/quickstart/</a> ／ JSONL ストリーミングと progressive rendering は <a href="https://github.com/a2ui-project/a2ui">https://github.com/a2ui-project/a2ui</a>（README「built for streaming」）</p>
 <hr />
-<h2>15 LLMレイヤ（差替え可能）</h2>
+<h2>18 LLMレイヤ（差替え可能）</h2>
 <p><strong>コラム: temp 0.2 / topK 1（低ランダム設定）とは何か</strong>
 - LLM は次の1トークンを「確率分布から選ぶ」ことを繰り返して文章を作る。その選び方を制御するのがこの2つ。
 - <strong>temperature（温度）</strong>: 分布の尖り具合。1.0 が素の分布で、下げるほど「最有力候補をほぼ必ず選ぶ」尖った分布になり、上げるほど下位候補も選ばれて多様（=創造的だが不安定）になる。0.2 はかなり保守的な設定。
 - <strong>topK</strong>: 候補を「確率上位 K 個」に足切りしてから選ぶ。topK=40 なら上位40個から抽選。<strong>topK=1 は常に1位だけを選ぶ＝greedy decoding</strong> で、実質ランダム性ゼロ。
 - つまりこのデモは「<strong>毎回ほぼ同じ、最も確からしい出力</strong>」に全振りした設定。A2UI は1文字でも構造が壊れると描画できないので、文章生成で欲しい「言い回しの多様性」より構文の再現性を優先した。
 - 補足: topK=1 の時点で決定的なので、temperature はほぼ効かない（保険で低値にしてある）。
-- 副作用も話せる: greedy は<strong>同語反復ループ（縮退）に弱い</strong>。多様性ゼロなので一度ループに入ると抜けられない。これがスライド20の暴走ガードが要る理由のひとつ。逆に「壊れるときは毎回同じように壊れる」ので、再現性がありデバッグは速かった。
+- 副作用も話せる: greedy は<strong>同語反復ループ（縮退）に弱い</strong>。多様性ゼロなので一度ループに入ると抜けられない。これがスライド23の暴走ガードが要る理由のひとつ。逆に「壊れるときは毎回同じように壊れる」ので、再現性がありデバッグは速かった。
 - 想定問答「temperature 0 じゃだめ？」→ 実装上 topK=1 が同じ意味になる。「JSON を保証したいなら制約付きデコード（grammar/GBNF）では？」→ その通りで設計時の理想形。LiteRT-LM 経路では未対応のため、検証→自己修正ループで担保している。</p>
 <hr />
-<h2>16 オンデバイスLLMの選定</h2>
+<h2>19 オンデバイスLLMの選定</h2>
 <p><strong>コラム: 選定の実際の流れ</strong>
 - 設計段階の候補は Gemma 3n E2B/E4B と Qwen2.5 0.5B/1.5B Instruct（design.md 当時）。Qwen は最軽量だが、A2UI のような厳密な構造化 JSON と日本語のUI文言の両立に不安があり、flutter_gemma での実績も薄く机上評価で見送り。
 - 最初の統合は Gemma 3n E2B で実装 → レビューで Gemma 4 E2B に切替。決め手は ①litert-community 配布で<strong>認証不要</strong>（HF トークン配布の運用が消える）②LiteRT-LM（.litertlm）+ GPU で Pixel 6a でも実用速度 ③gemma4 専用 ModelType でネイティブ function-calling トークン対応。
@@ -86,11 +111,11 @@
   - <strong>Per-Layer Embeddings (PLE)</strong>: 各デコーダ層がトークンごとの小さな埋め込み表を持つ。表自体は大きいが「参照するだけ」なので GPU/アクセラレータの高速メモリに常駐させる必要がなく、実効フットプリントに数えない。
   - <strong>MatFormer（Matryoshka Transformer）</strong>: 大きいモデルの中に小さいモデルが入れ子で同時学習される。E2B は E4B の中に最適化された「サブモデル」。
 - つまり「5Bモデルの品質の一部を、2B並みのメモリ・速度で動かす」ためのオンデバイス特化設計。E2B はメモリ約2GB級の端末でも動く想定。
-- 出典: Google AI for Developers(ai.google.dev/gemma)、Google Developers Blog(Gemma 3n developer guide)。命名は 3n 世代から踏襲。
+- <strong>出典</strong>: <a href="https://ai.google.dev/gemma/docs/gemma-3n">https://ai.google.dev/gemma/docs/gemma-3n</a>（MatFormer / PLE / 実効パラメータの定義）、<a href="https://developers.googleblog.com/en/introducing-gemma-3n-developer-guide/">https://developers.googleblog.com/en/introducing-gemma-3n-developer-guide/</a>、配布元 <a href="https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm">https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm</a>。命名は 3n 世代から踏襲。
 - 量子化は 4bit。温度 0.2 / topK 1 の低ランダム設定で構造の安定を優先（その代わり壊れるときは毎回同じように壊れる＝デバッグはしやすい）。
 - 想定問答「もっと大きいモデルなら自己修正いらないのでは？」→ その通りだが、このデモの主張は「<strong>小型でも 検証→自己修正 のループで実用になる</strong>」。端末を選ばないことに価値がある。</p>
 <hr />
-<h2>20 実際に遭遇した罠：2回目の生成から壊れる</h2>
+<h2>23 実際に遭遇した罠：2回目の生成から壊れる</h2>
 <p><strong>コラム: 発表当日の朝に踏んだバグの裏話</strong>
 - 前日まで動いていたデモが当日朝に全滅。1回目の生成は必ず成功するのに、2回目から「o o o o…」「bolbolbol…」のような縮退ループに入る。
 - topK=1（greedy）にしていたおかげで<strong>毎回同じように壊れる</strong>＝再現性があり、切り分けが早かった。「1回目に成功したプロンプトをもう一度流すと壊れる」ことから、プロンプトではなく実行順序の問題と特定。
@@ -101,9 +126,10 @@
 - 仕組みは自己強化: LLM は直前の文脈から次トークンの分布を作るため、同じ語が2〜3回続くと「次も同じ語」の確率がさらに上がる。<strong>greedy（topK=1）は常に1位を選ぶので、一度落ちると脱出手段がない</strong>。温度や topK を上げれば抜けられる可能性があるが、JSON が壊れるリスクと引き換え。
 - 小型モデルほど分布が崩れやすく、プロンプトが守備範囲外・エンジン状態が汚染などの条件で、1トークン目から無意味な語が1位になることもある（今回はこれ。途中からではなく prefill 直後から縮退していた）。
 - 一般的な対策: repetition penalty / no-repeat n-gram（ランタイム対応が必要。LiteRT-LM 経路は未対応）、サンプリング多様化（構造生成では諸刃）、<strong>アプリ側の暴走ガード（本デモ採用。ランタイム非依存で必ず効く）</strong>。
-- 話のオチに使える: topK=1 の「抜けられない」性質のせいで起きた事故だが、「毎回同じように壊れる」再現性のおかげで切り分けは最速だった。弱点と利点は表裏。</p>
+- 話のオチに使える: topK=1 の「抜けられない」性質のせいで起きた事故だが、「毎回同じように壊れる」再現性のおかげで切り分けは最速だった。弱点と利点は表裏。
+- <strong>出典</strong>: Holtzman et al. 2019 “The Curious Case of Neural Text Degeneration” <a href="https://arxiv.org/abs/1904.09751">https://arxiv.org/abs/1904.09751</a>（nucleus sampling 提案論文）／ flutter_gemma の KV-cache bleed 修正（#308）は <a href="https://pub.dev/packages/flutter_gemma/changelog">https://pub.dev/packages/flutter_gemma/changelog</a></p>
 <hr />
-<h2>22 実務で入れるなら：いまの懸念点</h2>
+<h2>25 実務で入れるなら：いまの懸念点</h2>
 <p><strong>コラム: 各懸念の深掘りと「それでも今触る理由」</strong>
 - <strong>仕様の若さ</strong>: v0.8→v0.9 でコンポーネント形式がフラット化される破壊的変更があった。v1.0 Candidate が進行中なので、本番投入は v1.0 待ちが無難。ただしプロトコルが小さいので追従コストも小さい（本実装の対応図のとおり、コア概念は7つ程度）。
 - <strong>カタログの標準化</strong>: 「標準カタログだけだと実務UIに足りない / 独自カタログにすると相互運用が薄れる」のジレンマ。CopilotKit の Zod 方式（コンポーネント定義から説明をプロンプトへ自動注入）が現実解の一つ。自社デザインシステムをカタログ化する作業が実質の導入コスト。
@@ -112,7 +138,7 @@
 - <strong>プラットフォーム対応</strong>: SwiftUI / Jetpack Compose レンダラーは計画中。モバイルネイティブが揃った時が普及の変曲点になりそう。
 - <strong>「それでも今触る理由」の話し方</strong>: MCP も 2024 年末の登場時は同じ懸念（仕様が若い・ツール不足）を言われたが、1年で標準になった。プロトコルは「先に手を動かした人」がエコシステムの形を決める。触るなら波が来る前のいま。</p>
 <hr />
-<h2>23 嬉しいUXの正体：4つの「〜ない」</h2>
+<h2>26 嬉しいUXの正体：4つの「〜ない」</h2>
 <p><strong>コラム: これは A2UI のメリット？ オンデバイスのメリット？（質問への整理）</strong>
 - 答えは「<strong>両方の掛け算</strong>」。スライドの第3列「どこから来るか」で帰属を明示した。
   - <strong>探さない</strong> = A2UI×LLM。文脈に合わせて次の操作が並んだUIを都度生成できるから。
@@ -121,10 +147,10 @@
   - <strong>送られない</strong> = 純粋にオンデバイス。A2UIは無関係。
 - 話し方の例: 「打ち込まないは A2UI の手柄、送られないはオンデバイスの手柄。全部同時に効くのがこのデモの構成です」。</p>
 <hr />
-<h2>26 実機デモ（Pixel 6a・オフライン）</h2>
+<h2>29 実機デモ（Pixel 6a・オフライン）</h2>
 <p><strong>コラム: 実測値の根拠</strong>
 - スライドの3枚はすべて発表当日に Pixel 6a（release ビルド・オフライン）で生成し、バリデーション OK まで通った実キャプチャ。
 - 実測: 初回トークン約2秒 / 1画面25〜35秒 / 連続生成はエンジン再初期化で+5〜10秒。
-- デモ中に「エンジン再初期化中」と表示されるのはスライド20の対策が動いているところ。</p>
+- デモ中に「エンジン再初期化中」と表示されるのはスライド23の対策が動いているところ。</p>
 <hr />
 <p>（以降、質問をもらい次第このファイルにコラムを追記）</p></main></body></html>
